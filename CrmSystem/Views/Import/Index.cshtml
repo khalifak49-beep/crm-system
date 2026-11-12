@@ -1,0 +1,190 @@
+@{
+    ViewData["Title"] = L["Import.Title"];
+    ViewData["Subtitle"] = L["Import.Subtitle"];
+}
+
+<div class="page-actions">
+    <a asp-controller="Activities" asp-action="Index" class="btn btn-light-fill me-auto"><i class="f7-icons flip-rtl" aria-hidden="true">chevron_left</i>@L["Menu.Activities"]</a>
+    <a asp-action="Template" class="btn btn-light-fill"><i class="f7-icons" aria-hidden="true">arrow_down_doc</i>@L["Import.Template"]</a>
+</div>
+
+<!-- Step 1: upload -->
+<section class="glass-card page-section" id="stepUpload">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title">1. @L["Import.Step1"]</h2>
+            <p class="card-hint">@L["Import.Columns"]: <span dir="ltr">Date | Client | Contact | Cold Calls | Emails | Visit | Facility Tour | Note</span></p>
+        </div>
+    </div>
+    <label class="dropzone d-block" id="dropzone" for="fileInput">
+        <i class="f7-icons" aria-hidden="true">tray_arrow_up</i>
+        <div class="fw-semibold mt-2">@L["Import.Drop"]</div>
+        <div class="small text-tertiary">.xlsx · @L["Import.MaxSize"]</div>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm" class="visually-hidden" />
+    </label>
+    <ul class="small text-secondary-2 mt-3 mb-0">
+        <li>@L["Import.Rule1"]</li>
+        <li>@L["Import.Rule2"]</li>
+        <li>@L["Import.Rule3"]</li>
+        <li>@L["Import.RuleContact"]</li>
+        <li>@L["Import.Rule4"]</li>
+    </ul>
+</section>
+
+<!-- Step 2: preview -->
+<section class="glass-card page-section" id="stepPreview" hidden>
+    <div class="card-head">
+        <div>
+            <h2 class="card-title">2. @L["Import.Step2"]</h2>
+            <p class="card-hint" id="previewFile"></p>
+        </div>
+    </div>
+    <div id="alreadyImported" class="inline-warning mb-3" hidden><i class="f7-icons sm" aria-hidden="true">exclamationmark_triangle</i><span></span></div>
+    <div class="stat-grid mb-3" id="previewStats"></div>
+    <div id="newClientsBox" class="mb-3" hidden>
+        <div class="fw-semibold small mb-1">@L["Import.NewClients"]</div>
+        <div class="d-flex flex-wrap gap-1" id="newClients"></div>
+    </div>
+
+    <div class="segmented mb-2" role="group" id="rowFilter">
+        <button type="button" data-f="all" aria-pressed="true">@L["Common.All"]</button>
+        <button type="button" data-f="errors" aria-pressed="false">@L["Import.Errors"]</button>
+        <button type="button" data-f="duplicates" aria-pressed="false">@L["Import.Duplicates"]</button>
+        <button type="button" data-f="new" aria-pressed="false">@L["Import.NewClientRows"]</button>
+    </div>
+    <div class="table-scroll" style="max-height:420px">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>@L["Field.Date"]</th><th>@L["Field.Company"]</th><th>@L["Import.Contact"]</th><th>@L["Menu.Activities"]</th><th>@L["Field.Notes"]</th><th>@L["Field.Status"]</th></tr></thead>
+            <tbody id="previewRows"></tbody>
+        </table>
+    </div>
+    <div class="small text-tertiary mt-1" id="previewLimit" hidden>@L["Import.PreviewLimit"]</div>
+
+    <div class="form-section">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label for="performer" class="form-label">@L["Import.Performer"]</label>
+                <select id="performer" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Import.PerformerHint"]"></select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-switch-card">
+                    <input type="checkbox" id="skipDuplicates" class="form-check-input" role="switch" checked />
+                    <span class="fw-semibold">@L["Import.SkipDuplicates"]</span>
+                </label>
+            </div>
+            <div class="col-md-3 d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-light-fill" id="btnCancel">@L["Common.Cancel"]</button>
+                <button type="button" class="btn btn-primary" id="btnImport"><i class="f7-icons" aria-hidden="true">tray_arrow_down</i>@L["Import.Confirm"]</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- History -->
+<section class="glass-card">
+    <div class="card-head"><h2 class="card-title">@L["Import.History"]</h2></div>
+    <div id="historyGrid"></div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const t = App.t, esc = App.escapeHtml;
+            let preview = null, rowFilter = "all";
+            const input = document.getElementById("fileInput");
+            const zone = document.getElementById("dropzone");
+
+            const history = new CrmGrid("#historyGrid", {
+                url: "@Url.Action("History")", sort: "importBatchId", dir: "desc", searchable: false, pageSize: 10,
+                columns: [
+                    { key: "startedAtUtc", title: t("Field.Date"), render: (r) => esc(App.timeAgo(r.startedAtUtc)) },
+                    { key: "fileName", title: t("Import.File") },
+                    { key: "status", title: t("Field.Status"), render: (r) => Ui.badge({ 1: "gray", 2: "green", 3: "red", 4: "orange" }[r.status], { 1: "eye", 2: "checkmark_circle", 3: "xmark_circle", 4: "arrow_uturn_left" }[r.status], t("ImportStatus." + r.status)) },
+                    { key: "totalRows", title: t("Import.Rows"), align: "end" },
+                    { key: "activitiesCreated", title: t("Menu.Activities"), align: "end" },
+                    { key: "clientsCreated", title: t("Import.NewClients"), align: "end" },
+                    { key: "errorRows", title: t("Import.Errors"), align: "end" },
+                    { key: "importedBy", title: t("Import.By") }
+                ]
+            });
+
+            ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("drag"); }));
+            ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("drag"); }));
+            zone.addEventListener("drop", (e) => { if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); });
+            input.addEventListener("change", () => { if (input.files[0]) upload(input.files[0]); });
+
+            async function upload(file) {
+                const form = new FormData();
+                form.append("file", file);
+                try {
+                    preview = await App.post("@Url.Action("Preview")", form);
+                    showPreview();
+                } catch { /* toast shown */ }
+                input.value = "";
+            }
+
+            function stat(icon, tone, value, label) {
+                return `<div class="stat tone-${tone}"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">${icon}</i></div><div><div class="stat-value">${App.formatNumber(value)}</div><div class="stat-label">${esc(label)}</div></div></div>`;
+            }
+
+            function showPreview() {
+                document.getElementById("stepPreview").hidden = false;
+                document.getElementById("previewFile").textContent = preview.fileName;
+                const warn = document.getElementById("alreadyImported");
+                warn.hidden = !preview.alreadyImportedOn;
+                if (preview.alreadyImportedOn) warn.querySelector("span").textContent = t("Import.AlreadyImported", App.formatDate(preview.alreadyImportedOn));
+                document.getElementById("previewStats").innerHTML =
+                    stat("doc_text", "blue", preview.totalRows, t("Import.Rows")) +
+                    stat("checkmark_circle", "green", preview.activitiesToCreate, t("Import.ToCreate")) +
+                    stat("building_2", "indigo", preview.newClients.length, t("Import.NewClients")) +
+                    stat("person_2", "teal", preview.newContacts, t("Import.NewContacts")) +
+                    stat("doc_on_doc", "orange", preview.duplicateActivities, t("Import.Duplicates")) +
+                    stat("xmark_circle", "red", preview.errorRows, t("Import.Errors"));
+                document.getElementById("newClientsBox").hidden = preview.newClients.length === 0;
+                document.getElementById("newClients").innerHTML = preview.newClients.slice(0, 100).map((n) => Ui.badge("indigo", "plus", n)).join("") + (preview.newClients.length > 100 ? ` <span class="small">+${preview.newClients.length - 100}</span>` : "");
+                document.getElementById("previewLimit").hidden = preview.totalRows <= preview.rows.length;
+                document.getElementById("btnImport").disabled = preview.activitiesToCreate === 0 && preview.duplicateActivities === 0;
+                renderRows();
+                document.getElementById("stepPreview").scrollIntoView({ behavior: "smooth" });
+            }
+
+            function renderRows() {
+                const rows = preview.rows.filter((r) => rowFilter === "all" || (rowFilter === "errors" && !r.isValid) || (rowFilter === "duplicates" && r.activities.some((a) => a.duplicate)) || (rowFilter === "new" && r.newClient));
+                document.getElementById("previewRows").innerHTML = rows.map((r) => `
+                    <tr>
+                        <td class="tabular">${r.rowNumber}</td>
+                        <td class="tabular">${r.date ? App.formatDate(r.date) : `<span class="text-danger">${esc(r.rawDate || "—")}</span>`}</td>
+                        <td>${esc(r.clientName || "—")}${r.newClient ? " " + Ui.badge("indigo", "plus", t("Import.New")) : ""}</td>
+                        <td>${esc(r.contactName || "—")}</td>
+                        <td>${r.activities.map((a) => Ui.badge(a.duplicate ? "orange" : "blue", a.duplicate ? "doc_on_doc" : "checkmark", a.type)).join(" ")}</td>
+                        <td style="white-space:pre-line;max-width:420px">${esc(r.note || "")}</td>
+                        <td>${r.isValid ? (r.isDuplicate ? Ui.badge("orange", "doc_on_doc", t("Import.Duplicate")) : Ui.badge("green", "checkmark_circle", t("Import.Ok"))) : `<span class="text-danger small">${r.errors.map(esc).join("<br>")}</span>`}</td>
+                    </tr>`).join("") || `<tr><td colspan="7" class="text-center text-tertiary">${esc(t("Grid.Empty"))}</td></tr>`;
+            }
+            document.querySelectorAll("#rowFilter button").forEach((b) => b.addEventListener("click", () => {
+                document.querySelectorAll("#rowFilter button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+                rowFilter = b.dataset.f; renderRows();
+            }));
+
+            document.getElementById("btnCancel").addEventListener("click", () => { preview = null; document.getElementById("stepPreview").hidden = true; });
+            document.getElementById("btnImport").addEventListener("click", async () => {
+                if (!preview) return;
+                const ok = await App.confirm({ title: t("Import.Confirm"), message: t("Import.ConfirmMessage", preview.activitiesToCreate, preview.newClients.length), danger: false, confirmText: t("Import.Confirm") });
+                if (!ok) return;
+                const btn = document.getElementById("btnImport");
+                btn.disabled = true;
+                try {
+                    const result = await App.post("@Url.Action("Confirm")", {
+                        batchId: preview.batchId,
+                        performerId: document.getElementById("performer").value || null,
+                        skipDuplicates: document.getElementById("skipDuplicates").checked
+                    });
+                    App.toast(result.message, "success", 8000);
+                    preview = null;
+                    document.getElementById("stepPreview").hidden = true;
+                    history.reload(true);
+                } catch { btn.disabled = false; }
+            });
+        })();
+    </script>
+}

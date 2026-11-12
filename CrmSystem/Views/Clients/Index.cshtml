@@ -1,0 +1,65 @@
+@using CrmSystem.Models.Enums
+@{
+    ViewData["Title"] = L["Menu.Clients"];
+    ViewData["Subtitle"] = L["Clients.Subtitle"];
+    var canSeeAll = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager);
+}
+
+<div class="page-actions">
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="clientsGrid">
+        <i class="f7-icons" aria-hidden="true">plus</i>@L["Clients.New"]
+    </button>
+</div>
+
+<section class="glass-card">
+    <div id="clientsGrid"></div>
+</section>
+
+<template id="clientFilters">
+    <select class="form-select" id="fStatus" aria-label="@L["Field.Status"]">
+        <option value="">@L["Clients.AllActive"]</option>
+        @foreach (var o in UiHelpers.EnumOptions<ClientStatus>(L, "ClientStatus"))
+        {
+            <option value="@o.Value">@o.Text</option>
+        }
+    </select>
+    @if (canSeeAll)
+    {
+        <select id="fManager" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Filter.AllEmployees"]" aria-label="@L["Field.AccountManager"]"></select>
+    }
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const t = App.t;
+            const grid = new CrmGrid("#clientsGrid", {
+                url: "@Url.Action("List")",
+                sort: "companyName",
+                autoLoad: false,
+                params: () => ({
+                    status: document.getElementById("fStatus")?.value,
+                    managerId: document.getElementById("fManager")?.value
+                }),
+                rowUrl: (r) => "@Url.Action("Details")/" + r.clientId,
+                rowClass: (r) => r.overdueFollowUps > 0 ? "row-alert" : (r.status === 4 ? "row-muted" : ""),
+                columns: [
+                    { key: "companyName", title: t("Field.CompanyName"), sortable: true, render: (r) => `<a class="cell-main" href="@Url.Action("Details")/${r.clientId}">${App.escapeHtml(r.companyName)}</a><div class="cell-sub">${App.escapeHtml(r.companyCode)}${r.industry ? " · " + App.escapeHtml(r.industry) : ""}</div>` },
+                    { key: "primaryContactName", title: t("Field.PrimaryContact"), sortable: true, render: (r) => r.primaryContactName ? Ui.twoLines(r.primaryContactName, r.primaryContactPhone) : Ui.dash() },
+                    { key: "city", title: t("Field.City"), sortable: true, mobileHidden: true },
+                    { key: "lastActivityDate", title: t("Clients.LastContact"), sortable: true, render: (r) => Ui.date(r.lastActivityDate) },
+                    { key: "nextFollowUpDate", title: t("Clients.NextFollowUp"), sortable: true, render: (r) => r.nextFollowUpDate
+                        ? Ui.dateTime(r.nextFollowUpDate, r.nextFollowUpTime) + (r.overdueFollowUps > 0 ? " " + Ui.badge("red", "exclamationmark_circle", t("FollowUpStatus.4")) : "")
+                        : Ui.dash() },
+                    { key: "accountManagerName", title: t("Field.AccountManager"), sortable: true, mobileHidden: true, render: (r) => Ui.dash(r.accountManagerName) },
+                    { key: "totalActivities", title: t("Menu.Activities"), sortable: true, align: "center", mobileHidden: true, render: (r) => `<span class="tabular">${App.formatNumber(r.totalActivities)}</span>` },
+                    { key: "status", title: t("Field.Status"), sortable: true, render: (r) => Ui.status("ClientStatus", r.status) }
+                ]
+            });
+            grid.toolbar.appendChild(document.getElementById("clientFilters").content.cloneNode(true));
+            App.initDynamic(grid.toolbar);
+            grid.toolbar.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => grid.reload(true)));
+            grid.reload();
+        })();
+    </script>
+}

@@ -1,0 +1,81 @@
+@using CrmSystem.Models.Enums
+@{
+    ViewData["Title"] = L["Menu.FollowUps"];
+    ViewData["Subtitle"] = L["FollowUps.Subtitle"];
+    var canSeeAll = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager);
+    var tabs = new (string Key, string Icon)[]
+    {
+        ("today", "calendar_today"), ("tomorrow", "sunrise"), ("week", "calendar"), ("upcoming", "clock"),
+        ("overdue", "exclamationmark_circle"), ("completed", "checkmark_circle"), ("cancelled", "slash_circle"), ("all", "list_bullet")
+    };
+}
+
+<div class="page-actions">
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="followUpsGrid">
+        <i class="f7-icons" aria-hidden="true">calendar_badge_plus</i>@L["FollowUps.New"]
+    </button>
+</div>
+
+<div class="tabs" role="tablist" id="fuTabs">
+    @foreach (var tab in tabs)
+    {
+        <button type="button" class="tab-btn" role="tab" data-tab="@tab.Key" aria-selected="@(tab.Key == "today" ? "true" : "false")">
+            <i class="f7-icons sm" aria-hidden="true">@tab.Icon</i>@L["FollowUps.Tab." + char.ToUpperInvariant(tab.Key[0]) + tab.Key[1..]]
+            <span class="tab-count @(tab.Key == "overdue" ? "red" : "")" data-count="@tab.Key">·</span>
+        </button>
+    }
+</div>
+
+<section class="glass-card">
+    <div id="followUpsGrid"></div>
+</section>
+
+<template id="fuFilters">
+    <select id="fPriority" class="form-select" aria-label="@L["Field.Priority"]">
+        <option value="">@L["Field.Priority"]: @L["Common.All"]</option>
+        @foreach (var o in UiHelpers.EnumOptions<FollowUpPriority>(L, "Priority")) { <option value="@o.Value">@o.Text</option> }
+    </select>
+    <select id="fClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]" aria-label="@L["Field.Company"]"></select>
+    @if (canSeeAll)
+    {
+        <select id="fUser" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Filter.AllEmployees"]" aria-label="@L["Field.AssignedTo"]"></select>
+    }
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const params = new URLSearchParams(location.search);
+            let tab = params.get("tab") || "today";
+            const v = (id) => document.getElementById(id)?.value || "";
+
+            const grid = Cols.followUpsGrid("#followUpsGrid", {
+                autoLoad: false,
+                params: () => ({ tab, priority: v("fPriority"), clientId: v("fClient"), userId: v("fUser") }),
+                onLoaded: () => loadCounts()
+            });
+            grid.toolbar.appendChild(document.getElementById("fuFilters").content.cloneNode(true));
+            App.initDynamic(grid.toolbar);
+            grid.toolbar.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => grid.reload(true)));
+
+            async function loadCounts() {
+                const counts = await App.get("@Url.Action("Counts")", { clientId: v("fClient"), userId: v("fUser") }, { showLoading: false, silent: true });
+                Object.entries(counts).forEach(([k, n]) => {
+                    const el = document.querySelector(`[data-count="${k}"]`);
+                    if (el) { el.textContent = App.formatNumber(n); el.hidden = n === 0 && k !== "today"; }
+                });
+            }
+
+            function selectTab(key) {
+                tab = key;
+                document.querySelectorAll("#fuTabs .tab-btn").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === key ? "true" : "false"));
+                history.replaceState(null, "", location.pathname + "?tab=" + key);
+                grid.reload(true);
+            }
+            document.querySelectorAll("#fuTabs .tab-btn").forEach((b) => b.addEventListener("click", () => selectTab(b.dataset.tab)));
+            selectTab(tab);
+            const openId = params.get("open");
+            if (openId) App.openForm(App.url("FollowUps/Details/" + openId), { reloadGrid: "followUpsGrid" });
+        })();
+    </script>
+}

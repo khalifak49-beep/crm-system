@@ -1,0 +1,33 @@
+@* Shared <head> content for _Layout and _AuthLayout: theme bootstrapping, CSS (LTR or RTL) *@
+@{
+    var rtl = AppCultures.IsArabic;
+}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)" />
+<link rel="icon" href="~/favicon.ico" />
+
+@* Apply the saved theme before the first paint (no flash of the wrong theme) *@
+<script>
+    (function () {
+        try {
+            var t = localStorage.getItem("crm-theme");
+            if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        } catch (e) { }
+    })();
+</script>
+
+@if (rtl)
+{
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+}
+else
+{
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+}
+<link rel="stylesheet" href="~/lib/framework7-icons/css/framework7-icons.css" />
+
+<link rel="stylesheet" href="~/lib/tom-select/tom-select.bootstrap5.min.css" />
+<link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />

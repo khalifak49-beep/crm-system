@@ -1,0 +1,41 @@
+@using CrmSystem.Models.Enums
+@{
+    ViewData["Title"] = L["Menu.Projects"];
+    ViewData["Subtitle"] = L["Projects.Subtitle"];
+    var canSeeAll = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager);
+}
+
+<div class="page-actions">
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="projectsGrid">
+        <i class="f7-icons" aria-hidden="true">plus</i>@L["Projects.New"]
+    </button>
+</div>
+
+<section class="glass-card">
+    <div id="projectsGrid"></div>
+</section>
+
+<template id="projectFilters">
+    <select id="fStatus" class="form-select" aria-label="@L["Field.Status"]">
+        <option value="">@L["Field.Status"]: @L["Common.All"]</option>
+        @foreach (var o in UiHelpers.EnumOptions<ProjectStatus>(L, "ProjectStatus")) { <option value="@o.Value">@o.Text</option> }
+    </select>
+    <select id="fClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]" aria-label="@L["Field.Company"]"></select>
+    @if (canSeeAll)
+    {
+        <select id="fUser" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Filter.AllEmployees"]" aria-label="@L["Field.AssignedTo"]"></select>
+    }
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const v = (id) => document.getElementById(id)?.value || "";
+            const grid = Cols.projectsGrid("#projectsGrid", { autoLoad: false, params: () => ({ status: v("fStatus"), clientId: v("fClient"), userId: v("fUser") }) });
+            grid.toolbar.appendChild(document.getElementById("projectFilters").content.cloneNode(true));
+            App.initDynamic(grid.toolbar);
+            grid.toolbar.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => grid.reload(true)));
+            grid.reload();
+        })();
+    </script>
+}

@@ -1,0 +1,122 @@
+@model ProjectDetailsViewModel
+@{
+    var p = Model.Project;
+    ViewData["Title"] = p.ProjectName;
+    ViewData["Subtitle"] = Model.ClientName;
+}
+
+<div class="page-actions">
+    <a asp-action="Index" class="btn btn-light-fill me-auto"><i class="f7-icons flip-rtl" aria-hidden="true">chevron_left</i>@L["Menu.Projects"]</a>
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create", "Activities", new { clientId = p.ClientId, projectId = p.ProjectId })" data-reload-grid="projectActivitiesGrid">
+        <i class="f7-icons" aria-hidden="true">plus_bubble</i>@L["Activities.New"]
+    </button>
+    <button type="button" class="btn btn-light-fill" data-open-form="@Url.Action("Create", "FollowUps", new { clientId = p.ClientId, projectId = p.ProjectId })" data-reload-grid="projectFollowUpsGrid">
+        <i class="f7-icons" aria-hidden="true">calendar_badge_plus</i>@L["FollowUps.New"]
+    </button>
+    @if (Model.CanEdit)
+    {
+        <button type="button" class="btn btn-light-fill" data-open-form="@Url.Action("Edit", new { id = p.ProjectId })" data-reload="page"><i class="f7-icons" aria-hidden="true">pencil</i>@L["Common.Edit"]</button>
+        <button type="button" class="btn btn-light-fill text-danger" data-delete="@Url.Action("Delete", new { id = p.ProjectId })"><i class="f7-icons" aria-hidden="true">trash</i>@L["Common.Delete"]</button>
+    }
+</div>
+
+<div class="row g-3 page-section">
+    <section class="col-12 col-xl-7">
+        <div class="glass-card h-100">
+            <div class="d-flex flex-wrap gap-2 mb-3" id="projectBadges"></div>
+            <dl class="kv">
+                <dt>@L["Field.Company"]</dt><dd><a href="@Url.Action("Details", "Clients", new { id = p.ClientId })">@Model.ClientName</a></dd>
+                <dt>@L["Field.Value"]</dt><dd class="tabular">@(p.ProjectValue.HasValue ? p.ProjectValue.Value.ToString("N3") + " " + p.Currency : "—")</dd>
+                <dt>@L["Field.Probability"]</dt><dd class="tabular">@p.Probability%</dd>
+                <dt>@L["Field.ExpectedStartDate"]</dt><dd><span class="ltr">@(p.ExpectedStartDate?.ToString("dd/MM/yyyy") ?? "—")</span></dd>
+                <dt>@L["Field.ExpectedEndDate"]</dt><dd><span class="ltr">@(p.ExpectedEndDate?.ToString("dd/MM/yyyy") ?? "—")</span></dd>
+                <dt>@L["Field.AssignedTo"]</dt><dd>@(Model.AssignedToName ?? "—")</dd>
+                @if (p.ClosedDate.HasValue) { <dt>@L["Field.ClosedDate"]</dt><dd>@p.ClosedDate.Value.ToString("dd/MM/yyyy")</dd> }
+                @if (!string.IsNullOrEmpty(p.LostReason)) { <dt>@L["Field.LostReason"]</dt><dd>@p.LostReason</dd> }
+                @if (!string.IsNullOrEmpty(p.ProjectDescription)) { <dt>@L["Field.Description"]</dt><dd style="white-space:pre-line">@p.ProjectDescription</dd> }
+            </dl>
+        </div>
+    </section>
+    <section class="col-12 col-xl-5">
+        <div class="glass-card h-100">
+            <div class="card-head"><h2 class="card-title">@L["Projects.Notes"]</h2></div>
+            <form id="noteForm" class="mb-3">
+                <input type="hidden" name="ProjectId" value="@p.ProjectId" />
+                <label for="NoteText" class="visually-hidden">@L["Field.Note"]</label>
+                <textarea id="NoteText" name="NoteText" class="form-control mb-2" rows="2" placeholder="@L["Projects.NotePlaceholder"]" required></textarea>
+                <button type="submit" class="btn btn-primary btn-sm">@L["Projects.AddNote"]</button>
+            </form>
+            @if (Model.Notes.Count == 0) { <p class="small text-tertiary">@L["Projects.NoNotes"]</p> }
+            <ol class="timeline">
+                @foreach (var (note, author) in Model.Notes)
+                {
+                    <li class="timeline-item">
+                        <span class="timeline-dot" style="background:var(--indigo)"><i class="f7-icons" aria-hidden="true">text_bubble</i></span>
+                        <div class="timeline-body">
+                            <div class="timeline-date"><span class="ltr">@note.CreatedAt.ToString("dd/MM/yyyy HH:mm") UTC</span> · @author</div>
+                            <div class="timeline-text">@note.NoteText</div>
+                            @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager))
+                            {
+                                <button type="button" class="btn-link-plain text-danger p-0 mt-1" data-delete="@Url.Action("DeleteNote", new { id = note.ProjectNoteId })" data-reload="page">@L["Common.Delete"]</button>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+        </div>
+    </section>
+</div>
+
+<div class="tabs" role="tablist" id="projectTabs">
+    <button type="button" class="tab-btn" role="tab" aria-selected="true" data-tab="activities">@L["Menu.Activities"]</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="followups">@L["Menu.FollowUps"]</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="quotations">@L["Menu.Quotations"]</button>
+</div>
+<section class="glass-card tab-panel" data-panel="activities"><div id="projectActivitiesGrid"></div></section>
+<section class="glass-card tab-panel" data-panel="followups" hidden><div id="projectFollowUpsGrid"></div></section>
+<section class="tab-panel" data-panel="quotations" hidden>
+    <div class="glass-card mb-3">
+        <div class="card-head">
+            <h2 class="card-title">@L["Quotations.Title"]</h2>
+            <button type="button" class="btn-link-plain" data-open-form="@Url.Action("Create", "Quotations", new { clientId = p.ClientId, projectId = p.ProjectId })" data-reload-grid="projectQuotationsGrid"><i class="f7-icons sm" aria-hidden="true">plus</i> @L["Quotations.New"]</button>
+        </div>
+        <div id="projectQuotationsGrid"></div>
+    </div>
+    <div class="glass-card">
+        <div class="card-head">
+            <h2 class="card-title">@L["Tenders.Title"]</h2>
+            <button type="button" class="btn-link-plain" data-open-form="@Url.Action("Create", "Tenders", new { clientId = p.ClientId, projectId = p.ProjectId })" data-reload-grid="projectTendersGrid"><i class="f7-icons sm" aria-hidden="true">plus</i> @L["Tenders.New"]</button>
+        </div>
+        <div id="projectTendersGrid"></div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const projectId = @p.ProjectId;
+            document.getElementById("projectBadges").innerHTML = Ui.status("ProjectStatus", @((int)p.ProjectStatus));
+
+            const grids = { activities: Cols.activitiesGrid("#projectActivitiesGrid", { projectId, hideClient: true }) };
+            const creators = {
+                followups: () => grids.followups = Cols.followUpsGrid("#projectFollowUpsGrid", { projectId, hideClient: true, params: () => ({ tab: "all" }) }),
+                quotations: () => { grids.quotations = Cols.quotationsGrid("#projectQuotationsGrid", { projectId, hideClient: true }); grids.tenders = Cols.tendersGrid("#projectTendersGrid", { projectId, hideClient: true }); }
+            };
+            document.querySelectorAll("#projectTabs .tab-btn").forEach((tab) => tab.addEventListener("click", () => {
+                document.querySelectorAll("#projectTabs .tab-btn").forEach((x) => x.setAttribute("aria-selected", x === tab ? "true" : "false"));
+                document.querySelectorAll(".tab-panel").forEach((p) => p.hidden = p.dataset.panel !== tab.dataset.tab);
+                if (creators[tab.dataset.tab] && !grids[tab.dataset.tab]) creators[tab.dataset.tab]();
+            }));
+
+            document.getElementById("noteForm").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                if (!form.NoteText.value.trim()) return;
+                try {
+                    await App.post("@Url.Action("AddNote")", { projectId, noteText: form.NoteText.value });
+                    location.reload();
+                } catch { }
+            });
+        })();
+    </script>
+}

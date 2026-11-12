@@ -1,0 +1,16 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = L["Error.Title"];
+    if (User.Identity?.IsAuthenticated != true) { Layout = "_AuthLayout"; }
+}
+
+<div class="glass-card empty-state">
+    <i class="f7-icons" aria-hidden="true">exclamationmark_triangle</i>
+    <h1>@L["Error.Title"]</h1>
+    <p>@L["Error.Message"]</p>
+    @if (Model?.ShowRequestId == true)
+    {
+        <p class="small text-tertiary">@L["Error.RequestId"]: <code>@Model.RequestId</code></p>
+    }
+    <a href="~/" class="btn btn-primary">@L["AccessDenied.Back"]</a>
+</div>

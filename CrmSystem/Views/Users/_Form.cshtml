@@ -1,0 +1,100 @@
+@model UserFormViewModel
+@{
+    var isEdit = !string.IsNullOrEmpty(Model.Id);
+}
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post" novalidate autocomplete="off">
+    <div class="modal-header">
+        <h2 class="modal-title">@(isEdit ? L["Users.Edit"] : L["Users.New"])</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="FullName" class="form-label required"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="FullNameAr" class="form-label"></label>
+                <input asp-for="FullNameAr" class="form-control" dir="rtl" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="UserName" class="form-label required"></label>
+                <input asp-for="UserName" class="form-control" dir="ltr" autocapitalize="none" spellcheck="false" />
+                <span asp-validation-for="UserName"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Email" class="form-label required"></label>
+                <input asp-for="Email" class="form-control" type="email" dir="ltr" />
+                <span asp-validation-for="Email"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="JobTitle" class="form-label"></label>
+                <input asp-for="JobTitle" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" type="tel" dir="ltr" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Role" class="form-label required"></label>
+                <select asp-for="Role" class="form-select" disabled="@Model.IsSelf">
+                    @foreach (var r in AppRoles.All) { <option value="@r" selected="@(r == Model.Role)">@L["Role." + r]</option> }
+                </select>
+                @if (Model.IsSelf) { <input type="hidden" asp-for="Role" /> }
+                <span asp-validation-for="Role"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ManagerId" class="form-label"></label>
+                <select asp-for="ManagerId" data-remote="@Url.Action("Managers", "Lookup")" data-placeholder="@L["Common.Optional"]">
+                    @if (!string.IsNullOrEmpty(Model.ManagerId)) { <option value="@Model.ManagerId" selected>@Model.ManagerName</option> }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="PreferredLanguage" class="form-label"></label>
+                <select asp-for="PreferredLanguage" class="form-select">
+                    <option value="en">English</option>
+                    <option value="ar">العربية</option>
+                </select>
+            </div>
+            @if (!isEdit)
+            {
+                <div class="col-md-6">
+                    <label asp-for="Password" class="form-label required"></label>
+                    <input asp-for="Password" class="form-control" dir="ltr" autocomplete="new-password" />
+                    <span asp-validation-for="Password"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ConfirmPassword" class="form-label required"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" dir="ltr" autocomplete="new-password" />
+                    <span asp-validation-for="ConfirmPassword"></span>
+                </div>
+                <div class="col-12"><div class="form-text">@L["Users.PasswordRules"]</div></div>
+            }
+            <div class="col-md-4">
+                <label class="form-switch-card">
+                    @if (Model.IsSelf) { <input type="hidden" asp-for="IsActive" /><input type="checkbox" class="form-check-input" checked disabled /> }
+                    else { <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" /> }
+                    <span class="fw-semibold">@L["Field.Active"]</span>
+                </label>
+            </div>
+            <div class="col-md-4">
+                <label class="form-switch-card">
+                    <input asp-for="ReceiveEmailNotifications" class="form-check-input" type="checkbox" role="switch" />
+                    <span class="fw-semibold">@L["Users.ReceiveEmail"]</span>
+                </label>
+            </div>
+            <div class="col-md-4">
+                <label class="form-switch-card">
+                    <input asp-for="ReceiveBrowserNotifications" class="form-check-input" type="checkbox" role="switch" />
+                    <span class="fw-semibold">@L["Users.ReceiveBrowser"]</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+        <button type="submit" class="btn btn-primary">@L["Common.Save"]</button>
+    </div>
+</form>

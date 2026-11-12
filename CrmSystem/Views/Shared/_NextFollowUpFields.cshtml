@@ -1,0 +1,70 @@
+@* "Schedule next follow-up" section, shared by the activity form and the follow-up completion form.
+   Expects ViewData["Types"] = List<ActivityType>, ViewData["ClientFieldName"] = name of the client field in the form (for dependent contact list),
+   and ViewData["FixedClientId"] when the client is fixed. *@
+@model CrmSystem.Models.ViewModels.NextFollowUpFields
+@using CrmSystem.Models.Enums
+@{
+    var types = (List<CrmSystem.Models.Entities.ActivityType>)ViewData["Types"]!;
+    var clientField = ViewData["ClientFieldName"] as string ?? "ClientId";
+    var canAssign = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager);
+    var arabic = AppCultures.IsArabic;
+}
+<div class="form-section">
+    <label class="form-switch-card">
+        <input asp-for="ScheduleFollowUp" class="form-check-input" type="checkbox" role="switch" />
+        <span>
+            <span class="fw-semibold d-block"><i class="f7-icons sm" aria-hidden="true">calendar_badge_plus</i> @L["Activities.ScheduleFollowUp"]</span>
+            <span class="form-text">@L["Activities.ScheduleFollowUpHint"]</span>
+        </span>
+    </label>
+
+    <div class="row g-3 mt-1" data-show-when="ScheduleFollowUp">
+        <div class="col-md-4">
+            <label asp-for="FollowUpDate" class="form-label required"></label>
+            <input asp-for="FollowUpDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+            <span asp-validation-for="FollowUpDate"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="FollowUpTime" class="form-label required"></label>
+            <input asp-for="FollowUpTime" type="time" class="form-control" asp-format="{0:HH:mm}" />
+        </div>
+        <div class="col-md-4">
+            <label asp-for="FollowUpPriority" class="form-label"></label>
+            <select asp-for="FollowUpPriority" class="form-select" asp-items="@(UiHelpers.EnumOptions<FollowUpPriority>(L, "Priority", Model.FollowUpPriority))"></select>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="FollowUpTypeId" class="form-label required"></label>
+            <select asp-for="FollowUpTypeId" class="form-select">
+                <option value="">@L["Common.Select"]</option>
+                @foreach (var t in types)
+                {
+                    <option value="@t.ActivityTypeId" selected="@(t.ActivityTypeId == Model.FollowUpTypeId)">@(arabic ? t.NameAr : t.NameEn)</option>
+                }
+            </select>
+            <span asp-validation-for="FollowUpTypeId"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="FollowUpContactId" class="form-label"></label>
+            <select asp-for="FollowUpContactId" data-remote="@Url.Action("Contacts", "Lookup")" data-depends-on="@clientField" data-depends-param="clientId" data-placeholder="@L["Common.Select"]">
+                @if (Model.FollowUpContactId.HasValue) { <option value="@Model.FollowUpContactId" selected>@Model.FollowUpContactName</option> }
+            </select>
+        </div>
+        <div class="col-12">
+            <label asp-for="FollowUpDescription" class="form-label required"></label>
+            <textarea asp-for="FollowUpDescription" class="form-control" rows="2" placeholder="@L["Activities.FollowUpDescriptionHint"]"></textarea>
+            <span asp-validation-for="FollowUpDescription"></span>
+        </div>
+        @if (canAssign)
+        {
+            <div class="col-md-6">
+                <label asp-for="FollowUpAssignedToId" class="form-label"></label>
+                <select asp-for="FollowUpAssignedToId" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Common.Select"]">
+                    @if (!string.IsNullOrEmpty(Model.FollowUpAssignedToId)) { <option value="@Model.FollowUpAssignedToId" selected>@Model.FollowUpAssignedToName</option> }
+                </select>
+            </div>
+        }
+        <div class="col-12">
+            <div class="form-text"><i class="f7-icons sm" aria-hidden="true">bell</i> @L["Activities.ReminderHint"]</div>
+        </div>
+    </div>
+</div>

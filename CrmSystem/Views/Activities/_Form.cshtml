@@ -1,0 +1,114 @@
+@model ActivityFormViewModel
+@{
+    var isEdit = Model.ActivityId.HasValue;
+    var arabic = AppCultures.IsArabic;
+}
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.ActivityId" method="post" novalidate>
+    <div class="modal-header">
+        <h2 class="modal-title">@(isEdit ? L["Activities.Edit"] : L["Activities.New"])</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+        <input type="hidden" asp-for="RowVersion" />
+
+        <fieldset class="mb-3">
+            <legend class="form-label required">@L["Field.ActivityType"]</legend>
+            <div class="type-picker">
+                @foreach (var t in Model.Types)
+                {
+                    <label class="type-option" style="--type-color:@t.ColorHex">
+                        <input type="radio" name="ActivityTypeId" value="@t.ActivityTypeId" checked="@(t.ActivityTypeId == Model.ActivityTypeId)"
+                               data-val="true" data-val-required="@L["Validation.Required", L["Field.ActivityType"]]" />
+                        <span class="type-option-body"><i class="f7-icons" aria-hidden="true">@t.IconName</i><span>@(arabic ? t.NameAr : t.NameEn)</span></span>
+                    </label>
+                }
+            </div>
+            <span asp-validation-for="ActivityTypeId"></span>
+        </fieldset>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="ClientId" class="form-label required"></label>
+                <select asp-for="ClientId" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@(isEdit ? L["Common.SearchCompany"] : L["Activities.CompanyQuickHint"])" required
+                        data-create-field="@(isEdit ? null : "NewClientName")">
+                    @if (Model.ClientId.HasValue) { <option value="@Model.ClientId" selected>@Model.ClientName</option> }
+                </select>
+                <input type="hidden" asp-for="NewClientName" />
+                <span asp-validation-for="ClientId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ContactId" class="form-label"></label>
+                <select asp-for="ContactId" data-remote="@Url.Action("Contacts", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId"
+                        data-placeholder="@(isEdit ? L["Common.Select"] : L["Activities.ContactQuickHint"])" data-create-field="@(isEdit ? null : "NewContactName")">
+                    @if (Model.ContactId.HasValue) { <option value="@Model.ContactId" selected>@Model.ContactName</option> }
+                </select>
+                <input type="hidden" asp-for="NewContactName" />
+                <span asp-validation-for="ContactId"></span>
+            </div>
+            @if (!isEdit)
+            {
+                <div class="col-12" data-new-fields-for="ContactId" hidden>
+                    <div class="new-entity-box">
+                        <div class="small fw-semibold mb-2"><i class="f7-icons sm" aria-hidden="true">person_badge_plus</i> @L["Activities.NewContactDetails"]</div>
+                        <div class="row g-2">
+                            <div class="col-md-4"><input asp-for="NewContactJobTitle" class="form-control" placeholder="@L["Field.JobTitle"]" aria-label="@L["Field.JobTitle"]" /></div>
+                            <div class="col-md-4"><input asp-for="NewContactPhone" class="form-control" type="tel" dir="ltr" placeholder="@L["Field.Phone"]" aria-label="@L["Field.Phone"]" /></div>
+                            <div class="col-md-4"><input asp-for="NewContactEmail" class="form-control" type="email" dir="ltr" placeholder="@L["Field.Email"]" aria-label="@L["Field.Email"]" /></div>
+                        </div>
+                        <span asp-validation-for="NewContactEmail"></span>
+                    </div>
+                </div>
+            }
+            <div class="col-6 col-md-3">
+                <label asp-for="ActivityDate" class="form-label required"></label>
+                <input asp-for="ActivityDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span asp-validation-for="ActivityDate"></span>
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="ActivityTime" class="form-label"></label>
+                <input asp-for="ActivityTime" type="time" class="form-control" asp-format="{0:HH:mm}" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ProjectId" class="form-label"></label>
+                <select asp-for="ProjectId" data-remote="@Url.Action("Projects", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.ProjectId.HasValue) { <option value="@Model.ProjectId" selected>@Model.ProjectName</option> }
+                </select>
+                <span asp-validation-for="ProjectId"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Subject" class="form-label"></label>
+                <input asp-for="Subject" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label"></label>
+                <textarea asp-for="Notes" class="form-control" rows="4" placeholder="@L["Activities.NotesHint"]"></textarea>
+            </div>
+            <div class="col-md-@(Model.CanChoosePerformer ? "6" : "12")">
+                <label asp-for="Outcome" class="form-label"></label>
+                <input asp-for="Outcome" class="form-control" placeholder="@L["Activities.OutcomeHint"]" />
+                <span asp-validation-for="Outcome"></span>
+            </div>
+            @if (Model.CanChoosePerformer)
+            {
+                <div class="col-md-6">
+                    <label asp-for="PerformedById" class="form-label"></label>
+                    <select asp-for="PerformedById" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Common.Select"]" data-no-clear>
+                        @if (!string.IsNullOrEmpty(Model.PerformedById)) { <option value="@Model.PerformedById" selected>@Model.PerformedByName</option> }
+                    </select>
+                </div>
+            }
+        </div>
+
+        @if (!isEdit)
+        {
+            ViewData["Types"] = Model.Types;
+            ViewData["ClientFieldName"] = "ClientId";
+            <partial name="_NextFollowUpFields" model="Model" view-data="ViewData" />
+        }
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+        <button type="submit" class="btn btn-primary">@L["Common.Save"]</button>
+    </div>
+</form>

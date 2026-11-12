@@ -1,0 +1,244 @@
+@model SettingsViewModel
+@{
+    ViewData["Title"] = L["Menu.Settings"];
+    ViewData["Subtitle"] = L["Settings.Subtitle"];
+    var reminderOptions = new[] { 60, 120, 240, 720, 1440, 2880, 4320 }.Union(new[] { Model.FollowUpMinutesBefore }).Distinct().OrderBy(x => x);
+}
+
+<form id="settingsForm" asp-action="Save" method="post" novalidate>
+<div class="row g-3">
+    <nav class="col-lg-3 d-none d-lg-block" aria-label="@L["Menu.Settings"]">
+        <div class="glass-card settings-nav">
+            <a href="#sCompany"><i class="f7-icons sm" aria-hidden="true">building_2</i>@L["Settings.Company"]</a>
+            <a href="#sGeneral"><i class="f7-icons sm" aria-hidden="true">globe</i>@L["Settings.General"]</a>
+            <a href="#sReminders"><i class="f7-icons sm" aria-hidden="true">bell</i>@L["Settings.Reminders"]</a>
+            <a href="#sNotifications"><i class="f7-icons sm" aria-hidden="true">app_badge</i>@L["Settings.Notifications"]</a>
+            <a href="#sSmtp"><i class="f7-icons sm" aria-hidden="true">envelope</i>@L["Settings.Smtp"]</a>
+            <a href="#sSecurity"><i class="f7-icons sm" aria-hidden="true">lock_shield</i>@L["Settings.Security"]</a>
+        </div>
+    </nav>
+
+    <div class="col-lg-9">
+        <!-- Company -->
+        <section class="glass-card settings-group" id="sCompany">
+            <h2 class="card-title mb-3">@L["Settings.Company"]</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CompanyName" class="form-label required"></label>
+                    <input asp-for="CompanyName" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CompanyNameAr" class="form-label"></label>
+                    <input asp-for="CompanyNameAr" class="form-control" dir="rtl" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">@L["Settings.Logo"]</label>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="brand-mark" style="width:56px;height:56px;border-radius:16px" id="logoPreview">
+                            @if (!string.IsNullOrEmpty(Model.LogoPath)) { <img src="@Url.Content(Model.LogoPath)" alt="" /> }
+                            else { <i class="f7-icons">person_2_square_stack_fill</i> }
+                        </div>
+                        <label class="btn btn-light-fill mb-0">
+                            <i class="f7-icons" aria-hidden="true">photo</i>@L["Settings.UploadLogo"]
+                            <input type="file" id="logoInput" accept=".png,.jpg,.jpeg,.webp" class="visually-hidden" />
+                        </label>
+                        @if (!string.IsNullOrEmpty(Model.LogoPath))
+                        {
+                            <button type="button" class="btn btn-light-fill text-danger" data-post="@Url.Action("RemoveLogo")" data-reload="page" data-confirm-message="@L["Settings.ConfirmRemoveLogo"]">@L["Common.Delete"]</button>
+                        }
+                        <span class="form-text">@L["Settings.LogoHint"]</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- General -->
+        <section class="glass-card settings-group" id="sGeneral">
+            <h2 class="card-title mb-3">@L["Settings.General"]</h2>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label asp-for="DefaultLanguage" class="form-label"></label>
+                    <select asp-for="DefaultLanguage" class="form-select"><option value="en">English</option><option value="ar">العربية</option></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="TimeZone" class="form-label required"></label>
+                    <select asp-for="TimeZone" class="form-select">
+                        @foreach (var tz in SettingsViewModel.TimeZones) { <option value="@tz">@tz</option> }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label required"></label>
+                    <input asp-for="Currency" class="form-control" maxlength="3" dir="ltr" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Reminders -->
+        <section class="glass-card settings-group" id="sReminders">
+            <h2 class="card-title mb-3">@L["Settings.Reminders"]</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="FollowUpMinutesBefore" class="form-label"></label>
+                    <select asp-for="FollowUpMinutesBefore" class="form-select">
+                        @foreach (var m in reminderOptions)
+                        {
+                            <option value="@m">@(m % 1440 == 0 ? L["Reminder.Days", m / 1440] : L["Reminder.Hours", m / 60.0])</option>
+                        }
+                    </select>
+                    <div class="form-text">@L["Settings.ReminderHint"]</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ScanIntervalSeconds" class="form-label"></label>
+                    <input asp-for="ScanIntervalSeconds" class="form-control" type="number" min="15" max="3600" dir="ltr" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="QuotationExpiryDaysBefore" class="form-label"></label>
+                    <input asp-for="QuotationExpiryDaysBefore" class="form-control" type="number" min="0" max="60" dir="ltr" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="TenderClosingDaysBefore" class="form-label"></label>
+                    <input asp-for="TenderClosingDaysBefore" class="form-control" type="number" min="0" max="60" dir="ltr" />
+                </div>
+                <div class="col-12">
+                    <label class="form-switch-card">
+                        <input asp-for="SendLateReminderImmediately" class="form-check-input" type="checkbox" role="switch" />
+                        <span><span class="fw-semibold d-block">@L["Settings.LateReminder"]</span><span class="form-text">@L["Settings.LateReminderHint"]</span></span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Notification channels -->
+        <section class="glass-card settings-group" id="sNotifications">
+            <h2 class="card-title mb-3">@L["Settings.Notifications"]</h2>
+            <div class="row g-3">
+                <div class="col-md-4"><label class="form-switch-card"><input asp-for="InAppEnabled" class="form-check-input" type="checkbox" role="switch" /><span class="fw-semibold">@L["Settings.InApp"]</span></label></div>
+                <div class="col-md-4"><label class="form-switch-card"><input asp-for="EmailEnabled" class="form-check-input" type="checkbox" role="switch" /><span class="fw-semibold">@L["Settings.Email"]</span></label></div>
+                <div class="col-md-4"><label class="form-switch-card"><input asp-for="BrowserEnabled" class="form-check-input" type="checkbox" role="switch" /><span class="fw-semibold">@L["Settings.Browser"]</span></label></div>
+                <div class="col-md-6">
+                    <label asp-for="PollIntervalSeconds" class="form-label"></label>
+                    <input asp-for="PollIntervalSeconds" class="form-control" type="number" min="10" max="600" dir="ltr" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="MaxEmailAttempts" class="form-label"></label>
+                    <input asp-for="MaxEmailAttempts" class="form-control" type="number" min="1" max="10" dir="ltr" />
+                </div>
+            </div>
+        </section>
+
+        <!-- SMTP -->
+        <section class="glass-card settings-group" id="sSmtp">
+            <h2 class="card-title mb-3">@L["Settings.Smtp"]</h2>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="SmtpHost" class="form-label"></label>
+                    <input asp-for="SmtpHost" class="form-control" dir="ltr" placeholder="smtp.office365.com" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="SmtpPort" class="form-label"></label>
+                    <input asp-for="SmtpPort" class="form-control" type="number" dir="ltr" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SmtpUsername" class="form-label"></label>
+                    <input asp-for="SmtpUsername" class="form-control" dir="ltr" autocomplete="off" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SmtpPassword" class="form-label"></label>
+                    <input asp-for="SmtpPassword" class="form-control" dir="ltr" autocomplete="new-password" placeholder="@(Model.HasSmtpPassword ? L["Settings.PasswordStored"] : L["Settings.PasswordNotSet"])" />
+                    @if (Model.HasSmtpPassword)
+                    {
+                        <div class="form-check mt-1"><input asp-for="ClearSmtpPassword" class="form-check-input" type="checkbox" /><label asp-for="ClearSmtpPassword" class="form-check-label small">@L["Settings.ClearPassword"]</label></div>
+                    }
+                    <div class="form-text"><i class="f7-icons sm" aria-hidden="true">lock</i> @L["Settings.PasswordEncrypted"]</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SmtpFromEmail" class="form-label"></label>
+                    <input asp-for="SmtpFromEmail" class="form-control" type="email" dir="ltr" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SmtpFromName" class="form-label"></label>
+                    <input asp-for="SmtpFromName" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <label class="form-switch-card"><input asp-for="SmtpEnableSsl" class="form-check-input" type="checkbox" role="switch" /><span class="fw-semibold">@L["Settings.SmtpSsl"]</span></label>
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-2 align-items-end">
+                    <div class="flex-grow-1" style="max-width:340px">
+                        <label for="testTo" class="form-label">@L["Settings.TestTo"]</label>
+                        <input id="testTo" type="email" class="form-control" dir="ltr" placeholder="name@company.com" />
+                    </div>
+                    <button type="button" class="btn btn-light-fill" id="btnTestEmail"><i class="f7-icons" aria-hidden="true">paperplane</i>@L["Settings.SendTest"]</button>
+                    <span class="form-text">@L["Settings.TestHint"]</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security -->
+        <section class="glass-card settings-group" id="sSecurity">
+            <h2 class="card-title mb-3">@L["Settings.Security"]</h2>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-switch-card"><input asp-for="EmployeesSeeOnlyAssignedClients" class="form-check-input" type="checkbox" role="switch" />
+                        <span><span class="fw-semibold d-block">@L["Settings.EmployeesAssignedOnly"]</span><span class="form-text">@L["Settings.EmployeesAssignedOnlyHint"]</span></span></label>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="PasswordMinLength" class="form-label"></label>
+                    <input asp-for="PasswordMinLength" class="form-control" type="number" min="6" max="64" dir="ltr" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="MaxFailedAccessAttempts" class="form-label"></label>
+                    <input asp-for="MaxFailedAccessAttempts" class="form-control" type="number" min="3" max="20" dir="ltr" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="LockoutMinutes" class="form-label"></label>
+                    <input asp-for="LockoutMinutes" class="form-control" type="number" min="1" max="1440" dir="ltr" />
+                </div>
+                <div class="col-12"><div class="form-text">@L["Settings.SecurityRestart"]</div></div>
+                <div class="col-12">
+                    <a asp-controller="Users" asp-action="Index" class="btn btn-light-fill"><i class="f7-icons" aria-hidden="true">person_2</i>@L["Settings.ManageUsers"]</a>
+                </div>
+            </div>
+        </section>
+
+        <div class="page-actions mt-3" style="position:sticky;bottom:12px;z-index:5">
+            <button type="submit" class="btn btn-primary btn-lg shadow"><i class="f7-icons" aria-hidden="true">checkmark</i>@L["Settings.SaveAll"]</button>
+        </div>
+    </div>
+</div>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const form = document.getElementById("settingsForm");
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                try {
+                    const data = await App.post(form.action, new FormData(form));
+                    App.toast(data.message, "success");
+                    form.querySelector("[name=SmtpPassword]").value = "";
+                } catch { /* toast shown */ }
+            });
+
+            document.getElementById("btnTestEmail").addEventListener("click", async () => {
+                try {
+                    const data = await App.post("@Url.Action("TestEmail")", { to: document.getElementById("testTo").value });
+                    App.toast(data.message, "success", 8000);
+                } catch { }
+            });
+
+            document.getElementById("logoInput").addEventListener("change", async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append("logo", file);
+                try {
+                    const data = await App.post("@Url.Action("UploadLogo")", fd);
+                    App.toast(data.message, "success");
+                    setTimeout(() => location.reload(), 600);
+                } catch { }
+                e.target.value = "";
+            });
+        })();
+    </script>
+}

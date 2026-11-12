@@ -1,0 +1,66 @@
+@model CompleteFollowUpViewModel
+@{
+    var arabic = AppCultures.IsArabic;
+}
+<form asp-action="Complete" asp-route-id="@Model.FollowUpId" method="post" novalidate>
+    <div class="modal-header">
+        <h2 class="modal-title">@L["FollowUps.MarkCompleted"]</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+        <input type="hidden" asp-for="RowVersion" />
+        <input type="hidden" asp-for="ClientId" />
+
+        <div class="mb-3">
+            <div class="fw-semibold">@Model.ClientName</div>
+            <div class="text-secondary-2 small">@Model.Description</div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="CompletionNotes" class="form-label"></label>
+            <textarea asp-for="CompletionNotes" class="form-control" rows="2"></textarea>
+        </div>
+
+        <label class="form-switch-card">
+            <input asp-for="LogActivity" class="form-check-input" type="checkbox" role="switch" />
+            <span><span class="fw-semibold d-block">@L["FollowUps.LogActivity"]</span><span class="form-text">@L["FollowUps.LogActivityHint"]</span></span>
+        </label>
+        <div class="row g-3 mt-1" data-show-when="LogActivity">
+            <div class="col-md-4">
+                <label asp-for="ActivityTypeId" class="form-label required"></label>
+                <select asp-for="ActivityTypeId" class="form-select">
+                    @foreach (var t in Model.Types) { <option value="@t.ActivityTypeId" selected="@(t.ActivityTypeId == Model.ActivityTypeId)">@(arabic ? t.NameAr : t.NameEn)</option> }
+                </select>
+                <span asp-validation-for="ActivityTypeId"></span>
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="ActivityDate" class="form-label required"></label>
+                <input asp-for="ActivityDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span asp-validation-for="ActivityDate"></span>
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="ActivityTime" class="form-label"></label>
+                <input asp-for="ActivityTime" type="time" class="form-control" asp-format="{0:HH:mm}" />
+            </div>
+            <div class="col-12">
+                <label asp-for="ActivityNotes" class="form-label"></label>
+                <textarea asp-for="ActivityNotes" class="form-control" rows="3" placeholder="@L["Activities.NotesHint"]"></textarea>
+            </div>
+            <div class="col-12">
+                <label asp-for="ActivityOutcome" class="form-label"></label>
+                <input asp-for="ActivityOutcome" class="form-control" placeholder="@L["Activities.OutcomeHint"]" />
+            </div>
+        </div>
+
+        @{
+            ViewData["Types"] = Model.Types;
+            ViewData["ClientFieldName"] = "ClientId";
+        }
+        <partial name="_NextFollowUpFields" model="Model" view-data="ViewData" />
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+        <button type="submit" class="btn btn-primary"><i class="f7-icons" aria-hidden="true">checkmark_circle</i>@L["FollowUps.MarkCompleted"]</button>
+    </div>
+</form>

@@ -1,0 +1,87 @@
+@using CrmSystem.Models.Enums
+@{
+    ViewData["Title"] = L["Menu.Notifications"];
+    ViewData["Subtitle"] = L["Notif.Subtitle"];
+}
+
+<div class="page-actions">
+    <div class="me-auto" id="browserPermission" hidden>
+        <button type="button" class="btn btn-light-fill" id="enableBrowser"><i class="f7-icons" aria-hidden="true">desktopcomputer</i>@L["Notif.EnableBrowser"]</button>
+    </div>
+    <button type="button" class="btn btn-light-fill" data-post="@Url.Action("MarkAllRead")" data-reload-grid="notificationsGrid">
+        <i class="f7-icons" aria-hidden="true">checkmark_alt_circle</i>@L["Top.MarkAllRead"]
+    </button>
+</div>
+
+<div class="tabs" role="tablist" id="notifTabs">
+    <button type="button" class="tab-btn" role="tab" aria-selected="true" data-unread="false">@L["Common.All"]</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-unread="true">@L["Notif.Unread"]</button>
+</div>
+
+<section class="glass-card">
+    <div id="notificationsGrid"></div>
+</section>
+
+<template id="notifFilters">
+    <select id="fType" class="form-select" aria-label="@L["Field.Type"]">
+        <option value="">@L["Field.Type"]: @L["Common.All"]</option>
+        @foreach (var o in UiHelpers.EnumOptions<NotificationType>(L, "NotificationType")) { <option value="@o.Value">@o.Text</option> }
+    </select>
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const t = App.t, esc = App.escapeHtml;
+            let unreadOnly = false;
+            const grid = new CrmGrid("#notificationsGrid", {
+                url: "@Url.Action("List")",
+                sort: "id", dir: "desc",
+                autoLoad: false,
+                params: () => ({ unreadOnly, type: document.getElementById("fType")?.value }),
+                rowClass: (r) => r.isRead ? "" : "row-unread",
+                columns: [
+                    { key: "title", title: t("Notif.Notification"), render: (r) => `
+                        <div class="notif-item ${r.isRead ? "" : "unread"} p-0" data-id="${r.id}" style="background:none">
+                          <div class="flex-grow-1 min-w-0">
+                            <div class="notif-title">${esc(r.title)}</div>
+                            ${r.companyName ? `<div class="notif-text"><strong>${esc(r.companyName)}</strong></div>` : ""}
+                            <div class="notif-text" style="-webkit-line-clamp:unset">${esc(r.message)}</div>
+                          </div></div>` },
+                    { key: "eventAtLocal", title: t("Js.Notifications.Scheduled"), sortable: true, width: "170px", render: (r) => r.eventAtLocal ? `<span class="tabular">${App.formatDateTime(r.eventAtLocal)}</span>` : Ui.dash() },
+                    { key: "createdAtUtc", title: t("Notif.Received"), sortable: true, width: "130px", render: (r) => esc(App.timeAgo(r.createdAtUtc)) },
+                    { key: "actions", title: "", align: "end", width: "110px", render: (r) => Ui.actions([
+                        r.url ? { icon: "arrow_up_right_square", title: t("Js.Notifications.Open"), attrs: `data-open-url="${esc(r.url)}" data-id="${r.id}"` } : null,
+                        r.isRead ? null : { icon: "checkmark", title: t("Js.Notifications.MarkRead"), attrs: `data-mark="${r.id}"` }
+                    ]) }
+                ]
+            });
+            grid.toolbar.appendChild(document.getElementById("notifFilters").content.cloneNode(true));
+            document.getElementById("fType").addEventListener("change", () => grid.reload(true));
+
+            document.getElementById("notificationsGrid").addEventListener("click", async (e) => {
+                const mark = e.target.closest("[data-mark]");
+                if (mark) { await App.markRead(mark.dataset.mark); grid.reload(); return; }
+                const open = e.target.closest("[data-open-url]");
+                if (open) { await App.markRead(open.dataset.id).catch(() => { }); location.href = open.dataset.openUrl; }
+            });
+            document.addEventListener("crm:notification-read", () => grid.reload());
+
+            document.querySelectorAll("#notifTabs .tab-btn").forEach((b) => b.addEventListener("click", () => {
+                document.querySelectorAll("#notifTabs .tab-btn").forEach((x) => x.setAttribute("aria-selected", x === b ? "true" : "false"));
+                unreadOnly = b.dataset.unread === "true";
+                grid.reload(true);
+            }));
+            grid.reload();
+
+            // Browser (desktop) notifications permission
+            if (App.config.browserNotifications && "Notification" in window && Notification.permission !== "granted") {
+                document.getElementById("browserPermission").hidden = false;
+                document.getElementById("enableBrowser").addEventListener("click", async () => {
+                    const result = await App.requestBrowserPermission();
+                    if (result === "granted") document.getElementById("browserPermission").hidden = true;
+                });
+            }
+        })();
+    </script>
+}

@@ -1,0 +1,61 @@
+@{
+    ViewData["Title"] = L["Menu.Users"];
+    ViewData["Subtitle"] = L["Users.Subtitle"];
+}
+
+<div class="page-actions">
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="usersGrid">
+        <i class="f7-icons" aria-hidden="true">person_badge_plus</i>@L["Users.New"]
+    </button>
+</div>
+
+<section class="glass-card">
+    <div id="usersGrid"></div>
+</section>
+
+<template id="userFilters">
+    <select id="fRole" class="form-select" aria-label="@L["Field.Role"]">
+        <option value="">@L["Field.Role"]: @L["Common.All"]</option>
+        @foreach (var r in AppRoles.All) { <option value="@r">@L["Role." + r]</option> }
+    </select>
+    <select id="fActive" class="form-select" aria-label="@L["Field.Active"]">
+        <option value="">@L["Common.All"]</option>
+        <option value="true" selected>@L["Users.ActiveOnly"]</option>
+        <option value="false">@L["Users.InactiveOnly"]</option>
+    </select>
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const t = App.t, esc = App.escapeHtml, u = App.url;
+            const me = "@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value";
+            const grid = new CrmGrid("#usersGrid", {
+                url: "@Url.Action("List")",
+                sort: "fullName",
+                autoLoad: false,
+                params: () => ({ role: document.getElementById("fRole").value, active: document.getElementById("fActive").value }),
+                rowClass: (r) => r.isActive ? "" : "row-muted",
+                columns: [
+                    { key: "fullName", title: t("Field.FullName"), sortable: true, render: (r) => `<div class="d-flex align-items-center gap-2"><span class="avatar" style="width:30px;height:30px;font-size:.75rem">${esc((r.fullName || "?").split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase())}</span><div>${Ui.twoLines(App.config.lang === "ar" && r.fullNameAr ? r.fullNameAr : r.fullName, r.jobTitle)}</div></div>` },
+                    { key: "userName", title: t("Field.UserName"), sortable: true, render: (r) => `<span dir="ltr">${esc(r.userName)}</span>` },
+                    { key: "email", title: t("Field.Email"), sortable: true, mobileHidden: true },
+                    { key: "role", title: t("Field.Role"), render: (r) => r.role ? Ui.badge(r.role === "Admin" ? "purple" : r.role === "SalesManager" ? "indigo" : "blue", "person", t("Role." + r.role)) : Ui.dash() },
+                    { key: "managerName", title: t("Field.Manager"), sortable: true, mobileHidden: true, render: (r) => Ui.dash(r.managerName) },
+                    { key: "isActive", title: t("Field.Status"), sortable: true, render: (r) => (r.isActive ? Ui.badge("green", "checkmark_circle", t("Users.Active")) : Ui.badge("gray", "pause_circle", t("Users.Inactive"))) + (r.isLocked ? " " + Ui.badge("red", "lock", t("Users.Locked")) : "") },
+                    { key: "lastLoginAtUtc", title: t("Users.LastLogin"), sortable: true, mobileHidden: true, render: (r) => r.lastLoginAtUtc ? esc(App.timeAgo(r.lastLoginAtUtc)) : Ui.dash() },
+                    { key: "actions", title: "", align: "end", render: (r) => Ui.actions([
+                        { icon: "pencil", title: t("Common.Edit"), attrs: `data-open-form="${u("Users/Edit/" + r.id)}" data-reload-grid="usersGrid"` },
+                        { icon: "lock_rotation", title: t("Users.ResetPassword"), attrs: `data-open-form="${u("Users/ResetPassword/" + r.id)}" data-reload-grid="usersGrid" data-size="modal-md"` },
+                        r.isLocked ? { icon: "lock_open", title: t("Users.Unlock"), attrs: `data-post="${u("Users/Unlock/" + r.id)}" data-reload-grid="usersGrid"` } : null,
+                        r.id !== me ? { icon: r.isActive ? "pause_circle" : "play_circle", title: r.isActive ? t("Users.Deactivate") : t("Users.Activate"), danger: r.isActive,
+                            attrs: `data-post="${u("Users/ToggleActive/" + r.id)}" data-reload-grid="usersGrid" data-confirm-message="${esc(r.isActive ? t("Users.ConfirmDeactivate", r.fullName) : t("Users.ConfirmActivate", r.fullName))}" ${r.isActive ? "data-danger" : ""}` } : null
+                    ]) }
+                ]
+            });
+            grid.toolbar.appendChild(document.getElementById("userFilters").content.cloneNode(true));
+            grid.toolbar.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => grid.reload(true)));
+            grid.reload();
+        })();
+    </script>
+}

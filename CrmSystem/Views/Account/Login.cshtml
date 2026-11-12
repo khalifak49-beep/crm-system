@@ -1,0 +1,47 @@
+@model CrmSystem.Models.ViewModels.LoginViewModel
+@inject IAppSettings AppSettings
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = L["Login.Title"];
+    var settings = await AppSettings.GetAsync();
+    var arabic = AppCultures.IsArabic;
+}
+
+<div class="auth-card">
+    <div class="brand-mark" aria-hidden="true">
+        @if (!string.IsNullOrWhiteSpace(settings.LogoPath))
+        {
+            <img src="@Url.Content(settings.LogoPath)" alt="" />
+        }
+        else
+        {
+            <i class="f7-icons">person_2_square_stack_fill</i>
+        }
+    </div>
+    <h1>@settings.CompanyDisplayName(arabic)</h1>
+    <p class="subtitle">@L["Login.Subtitle"]</p>
+
+    <form asp-controller="Account" asp-action="Login" method="post" novalidate>
+        <input type="hidden" asp-for="ReturnUrl" />
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+
+        <div class="mb-3">
+            <label asp-for="UserNameOrEmail" class="form-label"></label>
+            <input asp-for="UserNameOrEmail" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus dir="ltr" />
+            <span asp-validation-for="UserNameOrEmail"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" class="form-control" autocomplete="current-password" dir="ltr" />
+            <span asp-validation-for="Password"></span>
+        </div>
+
+        <div class="form-check mb-4">
+            <input asp-for="RememberMe" class="form-check-input" />
+            <label asp-for="RememberMe" class="form-check-label"></label>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">@L["Login.Submit"]</button>
+    </form>
+</div>

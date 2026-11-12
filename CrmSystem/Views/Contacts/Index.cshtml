@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = L["Menu.Contacts"];
+    ViewData["Subtitle"] = L["Contacts.Subtitle"];
+}
+
+<div class="page-actions">
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="contactsGrid">
+        <i class="f7-icons" aria-hidden="true">person_badge_plus</i>@L["Contacts.New"]
+    </button>
+</div>
+
+<section class="glass-card">
+    <div id="contactsGrid"></div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const grid = Cols.contactsGrid("#contactsGrid", { autoLoad: false, params: () => ({ clientId: document.getElementById("fClient")?.value }) });
+            grid.toolbar.innerHTML = `<select id="fClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]" aria-label="@L["Field.Company"]"></select>`;
+            App.initDynamic(grid.toolbar);
+            document.getElementById("fClient").addEventListener("change", () => grid.reload(true));
+            grid.reload();
+        })();
+    </script>
+}

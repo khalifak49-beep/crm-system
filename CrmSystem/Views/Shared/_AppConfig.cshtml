@@ -1,0 +1,34 @@
+@* Renders window.AppConfig consumed by wwwroot/js/app.js *@
+@using System.Text.Json
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
+@inject IAppSettings AppSettings
+@{
+    var settings = await AppSettings.GetAsync();
+    var tokens = Antiforgery.GetAndStoreTokens(Context);
+    var authenticated = User.Identity?.IsAuthenticated == true;
+    var config = new
+    {
+        lang = AppCultures.IsArabic ? "ar" : "en",
+        basePath = Url.Content("~/"),
+        rtl = AppCultures.IsArabic,
+        antiforgery = tokens.RequestToken,
+        todayLocal = settings.TodayLocal.ToString("yyyy-MM-dd"),
+        timeZone = settings.TimeZoneId,
+        currency = settings.Currency,
+        pollIntervalSeconds = settings.PollIntervalSeconds,
+        browserNotifications = authenticated && settings.BrowserEnabled,
+        urls = authenticated && settings.InAppEnabled
+            ? new
+            {
+                bell = Url.Action("Bell", "Notifications"),
+                markRead = Url.Action("MarkRead", "Notifications"),
+                markAllRead = Url.Action("MarkAllRead", "Notifications"),
+                browserShown = Url.Action("BrowserShown", "Notifications")
+            }
+            : null,
+        messages = TempData.TakeToasts().Select(t => new { type = t.Type, text = t.Text }),
+        i18n = L.GetAllStrings().ToDictionary(s => s.Name, s => s.Value)
+    };
+}
+<script>window.AppConfig = @Html.Raw(JsonSerializer.Serialize(config));</script>

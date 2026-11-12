@@ -1,0 +1,250 @@
+@model ClientProfileViewModel
+@{
+    var c = Model.Client;
+    var s = Model.Summary;
+    var arabic = AppCultures.IsArabic;
+    var name = arabic && !string.IsNullOrWhiteSpace(c.CompanyNameAr) ? c.CompanyNameAr : c.CompanyName;
+    ViewData["Title"] = name;
+    ViewData["Subtitle"] = L["Clients.Profile"];
+}
+
+<div class="page-actions">
+    <a asp-action="Index" class="btn btn-light-fill me-auto"><i class="f7-icons flip-rtl" aria-hidden="true">chevron_left</i>@L["Menu.Clients"]</a>
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create", "Activities", new { clientId = c.ClientId })" data-reload="page">
+        <i class="f7-icons" aria-hidden="true">plus_bubble</i>@L["Activities.New"]
+    </button>
+    <button type="button" class="btn btn-light-fill" data-open-form="@Url.Action("Create", "FollowUps", new { clientId = c.ClientId })" data-reload="page">
+        <i class="f7-icons" aria-hidden="true">calendar_badge_plus</i>@L["FollowUps.New"]
+    </button>
+    @if (Model.CanEdit)
+    {
+        <button type="button" class="btn btn-light-fill" data-open-form="@Url.Action("Edit", new { id = c.ClientId })" data-reload="page">
+            <i class="f7-icons" aria-hidden="true">pencil</i>@L["Common.Edit"]
+        </button>
+        <button type="button" class="btn btn-light-fill" data-post="@Url.Action("Archive", new { id = c.ClientId })" data-reload="page"
+                data-confirm-message="@(c.Status == CrmSystem.Models.Enums.ClientStatus.Archived ? L["Clients.ConfirmRestore"] : L["Clients.ConfirmArchive"])">
+            <i class="f7-icons" aria-hidden="true">archivebox</i>@(c.Status == CrmSystem.Models.Enums.ClientStatus.Archived ? L["Clients.Restore"] : L["Clients.Archive"])
+        </button>
+    }
+    @if (Model.CanDelete)
+    {
+        <button type="button" class="btn btn-light-fill text-danger" data-delete="@Url.Action("Delete", new { id = c.ClientId })"
+                data-confirm-message="@L["Clients.ConfirmDelete", name]">
+            <i class="f7-icons" aria-hidden="true">trash</i>@L["Common.Delete"]
+        </button>
+    }
+</div>
+
+<div class="row g-3 page-section">
+    <!-- Company card -->
+    <section class="col-12 col-xl-8">
+        <div class="glass-card h-100">
+            <div class="profile-head">
+                <div class="profile-avatar" aria-hidden="true">@UiHelpers.Initials(c.CompanyName)</div>
+                <div class="profile-title">
+                    <h2>@name</h2>
+                    <div class="profile-meta">
+                        <span class="tabular"><i class="f7-icons sm" aria-hidden="true">number</i>@c.CompanyCode</span>
+                        @if (!string.IsNullOrEmpty(c.Industry)) { <span><i class="f7-icons sm" aria-hidden="true">briefcase</i>@c.Industry</span> }
+                        @if (!string.IsNullOrEmpty(c.City)) { <span><i class="f7-icons sm" aria-hidden="true">placemark</i>@c.City, @c.Country</span> }
+                        <span id="clientStatusBadge" data-status="@((int)c.Status)"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mini-stats">
+                <div class="mini-stat"><div class="label">@L["Clients.LastContact"]</div><div class="value"><span class="ltr">@(s.LastActivityDate?.ToString("dd/MM/yyyy") ?? "—")</span></div></div>
+                <div class="mini-stat"><div class="label">@L["Clients.NextFollowUp"]</div>
+                    <div class="value"><span class="ltr">@(s.NextFollowUpDate.HasValue ? s.NextFollowUpDate.Value.ToString("dd/MM/yyyy") + " " + (s.NextFollowUpTime?.ToString("hh:mm tt") ?? "") : "—")</span></div></div>
+                <div class="mini-stat"><div class="label">@L["Menu.Activities"]</div><div class="value">@s.TotalActivities</div></div>
+                <div class="mini-stat"><div class="label">@L["Stats.OverdueFollowUps"]</div><div class="value @(Model.OverdueFollowUps > 0 ? "text-danger" : "")">@Model.OverdueFollowUps</div></div>
+                <div class="mini-stat"><div class="label">@L["Clients.OpenProjects"]</div><div class="value">@Model.OpenProjects</div></div>
+            </div>
+
+            <dl class="kv mt-3">
+                @if (!string.IsNullOrEmpty(c.CompanyNameAr) && !arabic) { <dt>@L["Field.CompanyNameAr"]</dt><dd dir="rtl">@c.CompanyNameAr</dd> }
+                @if (arabic) { <dt>@L["Field.CompanyName"]</dt><dd dir="ltr" class="text-start">@c.CompanyName</dd> }
+                <dt>@L["Field.Phone"]</dt><dd dir="ltr" class="text-start">@(c.Phone ?? "—")</dd>
+                <dt>@L["Field.Email"]</dt><dd>@if (!string.IsNullOrEmpty(c.Email)) { <a href="mailto:@c.Email">@c.Email</a> } else { <span>—</span> }</dd>
+                <dt>@L["Field.Website"]</dt><dd>@if (!string.IsNullOrEmpty(c.Website)) { <a href="@(c.Website.StartsWith("http") ? c.Website : "https://" + c.Website)" target="_blank" rel="noopener noreferrer">@c.Website</a> } else { <span>—</span> }</dd>
+                <dt>@L["Field.Address"]</dt><dd>@(c.Address ?? "—")</dd>
+                <dt>@L["Field.AccountManager"]</dt><dd>@(Model.AccountManagerName ?? "—")</dd>
+                @if (Model.AssignedNames.Count > 0) { <dt>@L["Field.AssignedUsers"]</dt><dd>@string.Join("، ", Model.AssignedNames)</dd> }
+                @if (!string.IsNullOrEmpty(c.Description)) { <dt>@L["Field.Description"]</dt><dd style="white-space:pre-line">@c.Description</dd> }
+            </dl>
+        </div>
+    </section>
+
+    <!-- Contacts card -->
+    <section class="col-12 col-xl-4">
+        <div class="glass-card h-100">
+            <div class="card-head">
+                <h2 class="card-title">@L["Clients.ContactPersons"]</h2>
+                <button type="button" class="btn-link-plain" data-open-form="@Url.Action("Create", "Contacts", new { clientId = c.ClientId })" data-reload="page">
+                    <i class="f7-icons sm" aria-hidden="true">plus</i> @L["Contacts.New"]
+                </button>
+            </div>
+            @if (Model.Contacts.Count == 0)
+            {
+                <p class="text-tertiary small mb-0">@L["Contacts.None"]</p>
+            }
+            @foreach (var ct in Model.Contacts)
+            {
+                <div class="contact-card">
+                    <div class="avatar" aria-hidden="true">@UiHelpers.Initials(ct.FullName)</div>
+                    <div class="min-w-0 flex-grow-1">
+                        <div class="fw-semibold">@ct.FullName
+                            @if (ct.IsPrimary) { <span class="badge-soft blue ms-1"><i class="f7-icons" aria-hidden="true">star_fill</i>@L["Contacts.Primary"]</span> }
+                        </div>
+                        <div class="cell-sub">@ct.JobTitle@(string.IsNullOrEmpty(ct.Department) ? "" : " · " + ct.Department)</div>
+                        @if (!string.IsNullOrEmpty(ct.Mobile ?? ct.Phone)) { <div class="small" dir="ltr"><a href="tel:@(ct.Mobile ?? ct.Phone)">@(ct.Mobile ?? ct.Phone)</a></div> }
+                        @if (!string.IsNullOrEmpty(ct.Email)) { <div class="small text-truncate"><a href="mailto:@ct.Email">@ct.Email</a></div> }
+                    </div>
+                    <div class="row-actions align-self-start">
+                        <button type="button" class="icon-btn" title="@L["Common.Edit"]" aria-label="@L["Common.Edit"]" data-open-form="@Url.Action("Edit", "Contacts", new { id = ct.ContactId })" data-reload="page"><i class="f7-icons sm">pencil</i></button>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" role="tablist" id="profileTabs">
+    <button type="button" class="tab-btn" role="tab" aria-selected="true" data-tab="timeline"><i class="f7-icons sm" aria-hidden="true">clock</i>@L["Clients.Timeline"]</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="activities"><i class="f7-icons sm" aria-hidden="true">bubble_left_bubble_right</i>@L["Menu.Activities"] <span class="tab-count">@s.TotalActivities</span></button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="followups"><i class="f7-icons sm" aria-hidden="true">calendar</i>@L["Menu.FollowUps"] @if (Model.OverdueFollowUps > 0) { <span class="tab-count red">@Model.OverdueFollowUps</span> }</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="projects"><i class="f7-icons sm" aria-hidden="true">briefcase</i>@L["Menu.Projects"]</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="quotations"><i class="f7-icons sm" aria-hidden="true">doc_text</i>@L["Menu.Quotations"] <span class="tab-count">@(Model.Quotations + Model.Tenders)</span></button>
+</div>
+
+<section class="glass-card tab-panel" data-panel="timeline">
+    <div class="card-head">
+        <h2 class="card-title">@L["Clients.Timeline"]</h2>
+        <div class="segmented" role="group" id="timelineKinds">
+            <button type="button" data-kind="" aria-pressed="true">@L["Common.All"]</button>
+            <button type="button" data-kind="Activity" aria-pressed="false">@L["Menu.Activities"]</button>
+            <button type="button" data-kind="FollowUp" aria-pressed="false">@L["Menu.FollowUps"]</button>
+            <button type="button" data-kind="Project" aria-pressed="false">@L["Menu.Projects"]</button>
+            <button type="button" data-kind="Quotation" aria-pressed="false">@L["Quotations.Title"]</button>
+            <button type="button" data-kind="Tender" aria-pressed="false">@L["Tenders.Title"]</button>
+        </div>
+    </div>
+    <ol class="timeline" id="timeline"></ol>
+    <div class="text-center"><button type="button" class="btn btn-light-fill" id="timelineMore" hidden>@L["Common.LoadMore"]</button></div>
+</section>
+
+<section class="glass-card tab-panel" data-panel="activities" hidden>
+    <div class="card-head">
+        <div class="segmented" role="group" id="activityTypes">
+            <button type="button" data-type="" aria-pressed="true">@L["Common.All"]</button>
+            <button type="button" data-type="1" aria-pressed="false">@L["Stats.Calls"]</button>
+            <button type="button" data-type="2" aria-pressed="false">@L["Stats.Emails"]</button>
+            <button type="button" data-type="3,4" aria-pressed="false">@L["Stats.Visits"]</button>
+            <button type="button" data-type="5" aria-pressed="false">@L["Stats.Meetings"]</button>
+        </div>
+    </div>
+    <div id="clientActivitiesGrid"></div>
+</section>
+
+<section class="glass-card tab-panel" data-panel="followups" hidden>
+    <div class="card-head">
+        <div class="segmented" role="group" id="followUpTabs">
+            <button type="button" data-fu="upcoming" aria-pressed="true">@L["FollowUps.Tab.Upcoming"]</button>
+            <button type="button" data-fu="overdue" aria-pressed="false">@L["FollowUps.Tab.Overdue"]</button>
+            <button type="button" data-fu="completed" aria-pressed="false">@L["FollowUps.Tab.Completed"]</button>
+            <button type="button" data-fu="all" aria-pressed="false">@L["Common.All"]</button>
+        </div>
+    </div>
+    <div id="clientFollowUpsGrid"></div>
+</section>
+
+<section class="glass-card tab-panel" data-panel="projects" hidden>
+    <div class="card-head">
+        <h2 class="card-title">@L["Menu.Projects"]</h2>
+        <button type="button" class="btn-link-plain" data-open-form="@Url.Action("Create", "Projects", new { clientId = c.ClientId })" data-reload-grid="clientProjectsGrid"><i class="f7-icons sm" aria-hidden="true">plus</i> @L["Projects.New"]</button>
+    </div>
+    <div id="clientProjectsGrid"></div>
+</section>
+
+<section class="tab-panel" data-panel="quotations" hidden>
+    <div class="glass-card mb-3">
+        <div class="card-head">
+            <h2 class="card-title">@L["Quotations.Title"]</h2>
+            <button type="button" class="btn-link-plain" data-open-form="@Url.Action("Create", "Quotations", new { clientId = c.ClientId })" data-reload-grid="clientQuotationsGrid"><i class="f7-icons sm" aria-hidden="true">plus</i> @L["Quotations.New"]</button>
+        </div>
+        <div id="clientQuotationsGrid"></div>
+    </div>
+    <div class="glass-card">
+        <div class="card-head">
+            <h2 class="card-title">@L["Tenders.Title"]</h2>
+            <button type="button" class="btn-link-plain" data-open-form="@Url.Action("Create", "Tenders", new { clientId = c.ClientId })" data-reload-grid="clientTendersGrid"><i class="f7-icons sm" aria-hidden="true">plus</i> @L["Tenders.New"]</button>
+        </div>
+        <div id="clientTendersGrid"></div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const clientId = @c.ClientId;
+            const t = App.t;
+            document.getElementById("clientStatusBadge").innerHTML = Ui.status("ClientStatus", @((int)c.Status));
+
+            // ---- Timeline (newest first, load more) ----
+            let skip = 0, kind = "";
+            const list = document.getElementById("timeline");
+            const more = document.getElementById("timelineMore");
+            const kindLabels = { Activity: t("Menu.Activities"), FollowUp: t("Menu.FollowUps"), Project: t("Menu.Projects"), Quotation: t("Quotations.Title"), Tender: t("Tenders.Title") };
+
+            async function loadTimeline(reset) {
+                if (reset) { skip = 0; list.innerHTML = ""; }
+                const data = await App.get("@Url.Action("Timeline", new { id = c.ClientId })", { skip, take: 30, kind });
+                if (reset && data.items.length === 0) list.innerHTML = `<li class="text-tertiary small">${App.escapeHtml(t("Clients.TimelineEmpty"))}</li>`;
+                list.insertAdjacentHTML("beforeend", data.items.map((e) => {
+                    const status = e.kind === "FollowUp" ? " " + Ui.status("FollowUpStatus", { PENDING: 1, COMPLETED: 2, CANCELLED: 3, OVERDUE: 4 }[e.code]) : "";
+                    return `<li class="timeline-item">
+                        <span class="timeline-dot" style="background:${App.escapeHtml(e.color)}"><i class="f7-icons" aria-hidden="true">${App.escapeHtml(e.icon)}</i></span>
+                        <div class="timeline-body">
+                            <div class="timeline-date"><span class="ltr">${App.formatDateTime(e.at)}</span> · ${App.escapeHtml(kindLabels[e.kind] || e.kind)}</div>
+                            <div class="timeline-title">${App.escapeHtml(e.title)}${status}</div>
+                            ${e.details ? `<div class="timeline-text">${App.escapeHtml(e.details)}</div>` : ""}
+                            ${e.outcome ? `<div class="timeline-outcome"><i class="f7-icons sm" aria-hidden="true">arrow_turn_down_right</i>${App.escapeHtml(e.outcome)}</div>` : ""}
+                        </div></li>`;
+                }).join(""));
+                skip += data.items.length;
+                more.hidden = skip >= data.total;
+            }
+            more.addEventListener("click", () => loadTimeline(false));
+            document.querySelectorAll("#timelineKinds button").forEach((b) => b.addEventListener("click", () => {
+                document.querySelectorAll("#timelineKinds button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+                kind = b.dataset.kind;
+                loadTimeline(true);
+            }));
+            loadTimeline(true);
+
+            // ---- Tabs with lazily created grids ----
+            const grids = {};
+            let activityType = "", fuTab = "upcoming";
+            const creators = {
+                activities: () => grids.activities = Cols.activitiesGrid("#clientActivitiesGrid", { clientId, hideClient: true, params: () => ({ typeIds: activityType }) }),
+                followups: () => grids.followups = Cols.followUpsGrid("#clientFollowUpsGrid", { clientId, hideClient: true, params: () => ({ tab: fuTab }) }),
+                projects: () => grids.projects = Cols.projectsGrid("#clientProjectsGrid", { clientId, hideClient: true }),
+                quotations: () => { grids.quotations = Cols.quotationsGrid("#clientQuotationsGrid", { clientId, hideClient: true }); grids.tenders = Cols.tendersGrid("#clientTendersGrid", { clientId, hideClient: true }); }
+            };
+            document.querySelectorAll("#profileTabs .tab-btn").forEach((tab) => tab.addEventListener("click", () => {
+                document.querySelectorAll("#profileTabs .tab-btn").forEach((x) => x.setAttribute("aria-selected", x === tab ? "true" : "false"));
+                document.querySelectorAll(".tab-panel").forEach((p) => p.hidden = p.dataset.panel !== tab.dataset.tab);
+                if (creators[tab.dataset.tab] && !grids[tab.dataset.tab]) creators[tab.dataset.tab]();
+            }));
+            document.querySelectorAll("#activityTypes button").forEach((b) => b.addEventListener("click", () => {
+                document.querySelectorAll("#activityTypes button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+                activityType = b.dataset.type; grids.activities.reload(true);
+            }));
+            document.querySelectorAll("#followUpTabs button").forEach((b) => b.addEventListener("click", () => {
+                document.querySelectorAll("#followUpTabs button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+                fuTab = b.dataset.fu; grids.followups.reload(true);
+            }));
+        })();
+    </script>
+}

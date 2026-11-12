@@ -1,0 +1,64 @@
+@{
+    ViewData["Title"] = L["Menu.Activities"];
+    ViewData["Subtitle"] = L["Activities.Subtitle"];
+    var types = (List<CrmSystem.Models.Entities.ActivityType>)ViewBag.Types;
+    var canSeeAll = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager);
+    var arabic = AppCultures.IsArabic;
+}
+
+<div class="page-actions">
+    @if (canSeeAll)
+    {
+        <a asp-controller="Import" asp-action="Index" class="btn btn-light-fill"><i class="f7-icons" aria-hidden="true">tray_arrow_down</i>@L["Import.Title"]</a>
+    }
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="activitiesGrid">
+        <i class="f7-icons" aria-hidden="true">plus_bubble</i>@L["Activities.New"]
+    </button>
+</div>
+
+<section class="glass-card page-section">
+    <div class="filters">
+        <div class="filter-field">
+            <label for="fFrom">@L["Filter.From"]</label>
+            <input type="date" id="fFrom" class="form-control" />
+        </div>
+        <div class="filter-field">
+            <label for="fTo">@L["Filter.To"]</label>
+            <input type="date" id="fTo" class="form-control" />
+        </div>
+        <div class="filter-field">
+            <label for="fType">@L["Field.ActivityType"]</label>
+            <select id="fType" class="form-select">
+                <option value="">@L["Common.All"]</option>
+                @foreach (var t in types) { <option value="@t.ActivityTypeId">@(arabic ? t.NameAr : t.NameEn)</option> }
+            </select>
+        </div>
+        <div class="filter-field grow">
+            <label for="fClient">@L["Field.Company"]</label>
+            <select id="fClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]"></select>
+        </div>
+        @if (canSeeAll)
+        {
+            <div class="filter-field grow">
+                <label for="fUser">@L["Field.PerformedBy"]</label>
+                <select id="fUser" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Filter.AllEmployees"]"></select>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="glass-card">
+    <div id="activitiesGrid"></div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const v = (id) => document.getElementById(id)?.value || "";
+            const grid = Cols.activitiesGrid("#activitiesGrid", {
+                params: () => ({ from: v("fFrom"), to: v("fTo"), typeIds: v("fType"), clientId: v("fClient"), userId: v("fUser") })
+            });
+            ["fFrom", "fTo", "fType", "fClient", "fUser"].forEach((id) => document.getElementById(id)?.addEventListener("change", () => grid.reload(true)));
+        })();
+    </script>
+}

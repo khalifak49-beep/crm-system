@@ -1,0 +1,108 @@
+@model ClientFormViewModel
+@using CrmSystem.Models.Enums
+@{
+    var isEdit = Model.ClientId.HasValue;
+}
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.ClientId" method="post" novalidate>
+    <div class="modal-header">
+        <h2 class="modal-title">@(isEdit ? L["Clients.Edit"] : L["Clients.New"])</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+        <input type="hidden" asp-for="RowVersion" />
+
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label asp-for="CompanyName" class="form-label required"></label>
+                <input asp-for="CompanyName" class="form-control" autocomplete="off" />
+                <span asp-validation-for="CompanyName"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CompanyCode" class="form-label"></label>
+                <input asp-for="CompanyCode" class="form-control" placeholder="@L["Clients.CodeAuto"]" dir="ltr" />
+                <span asp-validation-for="CompanyCode"></span>
+            </div>
+            <div class="col-md-8">
+                <label asp-for="CompanyNameAr" class="form-label"></label>
+                <input asp-for="CompanyNameAr" class="form-control" dir="rtl" />
+                <span asp-validation-for="CompanyNameAr"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" class="form-select" asp-items="@(UiHelpers.EnumOptions<ClientStatus>(L, "ClientStatus", Model.Status))"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Industry" class="form-label"></label>
+                <input asp-for="Industry" class="form-control" list="industryList" autocomplete="off" />
+                <datalist id="industryList">
+                    @foreach (var i in Model.Industries) { <option value="@i"></option> }
+                </datalist>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Phone" class="form-label"></label>
+                <input asp-for="Phone" class="form-control" dir="ltr" type="tel" />
+                <span asp-validation-for="Phone"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" dir="ltr" type="email" />
+                <span asp-validation-for="Email"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Website" class="form-label"></label>
+                <input asp-for="Website" class="form-control" dir="ltr" placeholder="https://" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Country" class="form-label required"></label>
+                <input asp-for="Country" class="form-control" />
+                <span asp-validation-for="Country"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="City" class="form-label"></label>
+                <input asp-for="City" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Address" class="form-label"></label>
+                <input asp-for="Address" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+
+        @if (Model.CanManageOwnership)
+        {
+            <div class="form-section">
+                <div class="form-section-title"><i class="f7-icons sm" aria-hidden="true">person_2</i>@L["Clients.Ownership"]</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="AccountManagerId" class="form-label"></label>
+                        <select asp-for="AccountManagerId" data-enhance data-placeholder="@L["Common.Select"]">
+                            <option value=""></option>
+                            @foreach (var u in Model.UserOptions)
+                            {
+                                <option value="@u.Id" selected="@(u.Id == Model.AccountManagerId)">@u.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="AssignedUserIds" class="form-label"></label>
+                        <select asp-for="AssignedUserIds" multiple data-enhance data-placeholder="@L["Common.Select"]">
+                            @foreach (var u in Model.UserOptions)
+                            {
+                                <option value="@u.Id" selected="@(Model.AssignedUserIds.Contains(u.Id))">@u.Name</option>
+                            }
+                        </select>
+                        <div class="form-text">@L["Clients.AssignedHint"]</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+        <button type="submit" class="btn btn-primary">@L["Common.Save"]</button>
+    </div>
+</form>

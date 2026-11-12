@@ -1,0 +1,78 @@
+@using CrmSystem.Models.Enums
+@{
+    ViewData["Title"] = L["Menu.Quotations"];
+    ViewData["Subtitle"] = L["Quotations.Subtitle"];
+}
+
+<div class="page-actions">
+    <button type="button" class="btn btn-light-fill" data-open-form="@Url.Action("Create", "Tenders")" data-reload-grid="tendersGrid">
+        <i class="f7-icons" aria-hidden="true">hammer</i>@L["Tenders.New"]
+    </button>
+    <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Create")" data-reload-grid="quotationsGrid">
+        <i class="f7-icons" aria-hidden="true">doc_text</i>@L["Quotations.New"]
+    </button>
+</div>
+
+<div class="tabs" role="tablist" id="qtTabs">
+    <button type="button" class="tab-btn" role="tab" aria-selected="true" data-tab="quotations"><i class="f7-icons sm" aria-hidden="true">doc_text</i>@L["Quotations.Title"]</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="tenders"><i class="f7-icons sm" aria-hidden="true">hammer</i>@L["Tenders.Title"]</button>
+</div>
+
+<section class="glass-card tab-panel" data-panel="quotations"><div id="quotationsGrid"></div></section>
+<section class="glass-card tab-panel" data-panel="tenders" hidden><div id="tendersGrid"></div></section>
+
+<template id="qFilters">
+    <select id="fqStatus" class="form-select" aria-label="@L["Field.Status"]">
+        <option value="">@L["Field.Status"]: @L["Common.All"]</option>
+        <option value="expiring">@L["Quotations.ExpiringSoon"]</option>
+        @foreach (var o in UiHelpers.EnumOptions<QuotationStatus>(L, "QuotationStatus")) { <option value="@o.Value">@o.Text</option> }
+    </select>
+    <select id="fqClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]" aria-label="@L["Field.Company"]"></select>
+</template>
+<template id="tFilters">
+    <select id="ftStatus" class="form-select" aria-label="@L["Field.Status"]">
+        <option value="">@L["Field.Status"]: @L["Common.All"]</option>
+        @foreach (var o in UiHelpers.EnumOptions<TenderStatus>(L, "TenderStatus")) { <option value="@o.Value">@o.Text</option> }
+    </select>
+    <select id="ftClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]" aria-label="@L["Field.Company"]"></select>
+</template>
+
+@section Scripts {
+    <script>
+        (function () {
+            const v = (id) => document.getElementById(id)?.value || "";
+            const qGrid = Cols.quotationsGrid("#quotationsGrid", {
+                autoLoad: false,
+                params: () => ({ status: v("fqStatus") === "expiring" ? "" : v("fqStatus"), expiringOnly: v("fqStatus") === "expiring", clientId: v("fqClient") })
+            });
+            qGrid.toolbar.appendChild(document.getElementById("qFilters").content.cloneNode(true));
+            App.initDynamic(qGrid.toolbar);
+            qGrid.toolbar.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => qGrid.reload(true)));
+            qGrid.reload();
+
+            let tGrid = null;
+            function ensureTenders() {
+                if (tGrid) return;
+                tGrid = Cols.tendersGrid("#tendersGrid", { autoLoad: false, params: () => ({ status: v("ftStatus"), clientId: v("ftClient") }) });
+                tGrid.toolbar.appendChild(document.getElementById("tFilters").content.cloneNode(true));
+                App.initDynamic(tGrid.toolbar);
+                tGrid.toolbar.querySelectorAll("select").forEach((s) => s.addEventListener("change", () => tGrid.reload(true)));
+                tGrid.reload();
+            }
+
+            function selectTab(key) {
+                document.querySelectorAll("#qtTabs .tab-btn").forEach((x) => x.setAttribute("aria-selected", x.dataset.tab === key ? "true" : "false"));
+                document.querySelectorAll(".tab-panel").forEach((p) => p.hidden = p.dataset.panel !== key);
+                if (key === "tenders") ensureTenders();
+            }
+            document.querySelectorAll("#qtTabs .tab-btn").forEach((b) => b.addEventListener("click", () => selectTab(b.dataset.tab)));
+
+            // Links from notifications: ?open=ID (quotation) or ?tab=tenders&open=ID
+            const params = new URLSearchParams(location.search);
+            const tab = params.get("tab") === "tenders" ? "tenders" : "quotations";
+            selectTab(tab);
+            const openId = params.get("open");
+            if (openId) App.openForm(App.url((tab === "tenders" ? "Tenders" : "Quotations") + "/Edit/" + openId), { reloadGrid: tab === "tenders" ? "tendersGrid" : "quotationsGrid" });
+        })();
+    </script>
+}

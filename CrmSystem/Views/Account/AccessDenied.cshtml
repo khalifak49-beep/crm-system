@@ -1,0 +1,10 @@
+@{
+    ViewData["Title"] = L["AccessDenied.Title"];
+}
+
+<div class="glass-card empty-state">
+    <i class="f7-icons" aria-hidden="true">lock_shield</i>
+    <h1>@L["AccessDenied.Title"]</h1>
+    <p>@L["AccessDenied.Message"]</p>
+    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary">@L["AccessDenied.Back"]</a>
+</div>

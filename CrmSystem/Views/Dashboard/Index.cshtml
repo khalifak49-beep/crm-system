@@ -1,0 +1,186 @@
+@model DashboardPageViewModel
+@{
+    ViewData["Title"] = L["Dashboard.Title"];
+    ViewData["Subtitle"] = L["Dashboard.Subtitle"];
+}
+
+<!-- ============ Filters ============ -->
+<section class="glass-card page-section" aria-label="@L["Filter.Period"]">
+    <div class="filters">
+        <div class="filter-field">
+            <label id="presetLabel">@L["Filter.Period"]</label>
+            <div class="segmented" role="group" aria-labelledby="presetLabel" id="presets">
+                <button type="button" data-preset="thisMonth" aria-pressed="false">@L["Filter.ThisMonth"]</button>
+                <button type="button" data-preset="last30" aria-pressed="false">@L["Filter.Last30"]</button>
+                <button type="button" data-preset="thisYear" aria-pressed="true">@L["Filter.ThisYear"]</button>
+                <button type="button" data-preset="lastYear" aria-pressed="false">@L["Filter.LastYear"]</button>
+            </div>
+        </div>
+        <div class="filter-field">
+            <label for="fromDate">@L["Filter.From"]</label>
+            <input type="date" id="fromDate" class="form-control" />
+        </div>
+        <div class="filter-field">
+            <label for="toDate">@L["Filter.To"]</label>
+            <input type="date" id="toDate" class="form-control" />
+        </div>
+        <div class="filter-field grow">
+            <label id="clientLabel">@L["Filter.Client"]</label>
+            <select id="clientFilter" aria-labelledby="clientLabel" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]"></select>
+        </div>
+        @if (Model.CanSeeAllData)
+        {
+            <div class="filter-field grow">
+                <label id="employeeLabel">@L["Filter.Employee"]</label>
+                <select id="employeeFilter" aria-labelledby="employeeLabel" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Filter.AllEmployees"]"></select>
+            </div>
+        }
+        <div class="filter-field" style="min-width:auto">
+            <button type="button" id="resetFilters" class="btn btn-light-fill">
+                <i class="f7-icons sm" aria-hidden="true">arrow_counterclockwise</i> @L["Filter.Reset"]
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- ============ Statistics ============ -->
+<section class="page-section" aria-labelledby="grpActivities">
+    <h2 class="section-title" id="grpActivities">@L["Dashboard.Group.Activities"]</h2>
+    <div class="stat-grid">
+        <div class="stat tone-green"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">phone_fill</i></div>
+            <div><div class="stat-value loading" data-stat="calls">0</div><div class="stat-label">@L["Stats.Calls"]</div></div></div>
+        <div class="stat tone-blue"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">envelope_fill</i></div>
+            <div><div class="stat-value loading" data-stat="emails">0</div><div class="stat-label">@L["Stats.Emails"]</div></div></div>
+        <div class="stat tone-orange"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">car_fill</i></div>
+            <div><div class="stat-value loading" data-stat="visits">0</div><div class="stat-label">@L["Stats.Visits"]</div></div></div>
+        <div class="stat tone-teal"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">building_2_fill</i></div>
+            <div><div class="stat-value loading" data-stat="facilityTours">0</div><div class="stat-label">@L["Stats.FacilityTours"]</div></div></div>
+        <div class="stat tone-indigo"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">person_3_fill</i></div>
+            <div><div class="stat-value loading" data-stat="meetings">0</div><div class="stat-label">@L["Stats.Meetings"]</div></div></div>
+    </div>
+</section>
+
+<div class="row g-3 page-section">
+    <section class="col-12 col-xl-4" aria-labelledby="grpFollowUps">
+        <h2 class="section-title" id="grpFollowUps">@L["Dashboard.Group.FollowUps"]</h2>
+        <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+            <div class="stat tone-orange"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">calendar_today</i></div>
+                <div><div class="stat-value loading" data-stat="todayFollowUps">0</div><div class="stat-label">@L["Stats.TodayFollowUps"]</div></div></div>
+            <div class="stat tone-red" data-alert-when="overdueFollowUps"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">exclamationmark_circle_fill</i></div>
+                <div><div class="stat-value loading" data-stat="overdueFollowUps">0</div><div class="stat-label">@L["Stats.OverdueFollowUps"]</div></div></div>
+            <div class="stat tone-blue"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">calendar</i></div>
+                <div><div class="stat-value loading" data-stat="upcomingFollowUps">0</div><div class="stat-label">@L["Stats.UpcomingFollowUps"]</div></div></div>
+        </div>
+    </section>
+    <section class="col-12 col-md-6 col-xl-3" aria-labelledby="grpClients">
+        <h2 class="section-title" id="grpClients">@L["Dashboard.Group.Clients"]</h2>
+        <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+            <div class="stat tone-gray"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">building_2</i></div>
+                <div><div class="stat-value loading" data-stat="totalClients">0</div><div class="stat-label">@L["Stats.TotalClients"]</div></div></div>
+            <div class="stat tone-green"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">checkmark_seal_fill</i></div>
+                <div><div class="stat-value loading" data-stat="activeClients">0</div><div class="stat-label">@L["Stats.ActiveClients"]</div></div></div>
+        </div>
+    </section>
+    <section class="col-12 col-md-6 col-xl-5" aria-labelledby="grpProjects">
+        <h2 class="section-title" id="grpProjects">@L["Dashboard.Group.Projects"]</h2>
+        <div class="stat-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+            <div class="stat tone-purple"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">briefcase_fill</i></div>
+                <div><div class="stat-value loading" data-stat="potentialProjects">0</div><div class="stat-label">@L["Stats.PotentialProjects"]</div></div></div>
+            <div class="stat tone-green"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">rosette</i></div>
+                <div><div class="stat-value loading" data-stat="wonProjects">0</div><div class="stat-label">@L["Stats.WonProjects"]</div></div></div>
+            <div class="stat tone-red"><div class="stat-icon"><i class="f7-icons" aria-hidden="true">xmark_circle_fill</i></div>
+                <div><div class="stat-value loading" data-stat="lostProjects">0</div><div class="stat-label">@L["Stats.LostProjects"]</div></div></div>
+        </div>
+    </section>
+</div>
+
+<!-- ============ Charts ============ -->
+<div class="chart-grid page-section">
+    <section class="glass-card span-7" data-chart-card="timeline">
+        <div class="card-head">
+            <h2 class="card-title">@L["Chart.ActivitiesOverTime"]</h2>
+            <div class="d-flex align-items-center gap-2">
+                <div class="segmented" role="group" aria-label="@L["Chart.ActivitiesOverTime"]" id="granularity">
+                    <button type="button" data-granularity="day" aria-pressed="false">@L["Chart.Granularity.Day"]</button>
+                    <button type="button" data-granularity="month" aria-pressed="false">@L["Chart.Granularity.Month"]</button>
+                    <button type="button" data-granularity="year" aria-pressed="false">@L["Chart.Granularity.Year"]</button>
+                </div>
+                <button type="button" class="icon-btn" data-toggle-table title="@L["Js.ShowTable"]" aria-label="@L["Js.ShowTable"]"><i class="f7-icons sm">table</i></button>
+            </div>
+        </div>
+        <div class="chart-box"><canvas id="chartTimeline" role="img" aria-label="@L["Chart.ActivitiesOverTime"]"></canvas><div class="chart-empty" hidden>@L["Js.NoData"]</div></div>
+        <div class="table-scroll" hidden data-table></div>
+    </section>
+
+    <section class="glass-card span-5" data-chart-card="comparison">
+        <div class="card-head">
+            <h2 class="card-title">@L["Chart.ChannelComparison"]</h2>
+            <button type="button" class="icon-btn" data-toggle-table title="@L["Js.ShowTable"]" aria-label="@L["Js.ShowTable"]"><i class="f7-icons sm">table</i></button>
+        </div>
+        <div class="chart-box"><canvas id="chartComparison" role="img" aria-label="@L["Chart.ChannelComparison"]"></canvas><div class="chart-empty" hidden>@L["Js.NoData"]</div></div>
+        <div class="table-scroll" hidden data-table></div>
+    </section>
+
+    <section class="glass-card span-6" data-chart-card="topClients">
+        <div class="card-head">
+            <h2 class="card-title">@L["Chart.TopClients"]</h2>
+            <button type="button" class="icon-btn" data-toggle-table title="@L["Js.ShowTable"]" aria-label="@L["Js.ShowTable"]"><i class="f7-icons sm">table</i></button>
+        </div>
+        <div class="chart-box tall"><canvas id="chartTopClients" role="img" aria-label="@L["Chart.TopClients"]"></canvas><div class="chart-empty" hidden>@L["Js.NoData"]</div></div>
+        <div class="table-scroll" hidden data-table></div>
+    </section>
+
+    <section class="glass-card span-6" data-chart-card="projects">
+        <div class="card-head">
+            <h2 class="card-title">@L["Chart.ProjectsByStatus"]</h2>
+            <button type="button" class="icon-btn" data-toggle-table title="@L["Js.ShowTable"]" aria-label="@L["Js.ShowTable"]"><i class="f7-icons sm">table</i></button>
+        </div>
+        <div class="chart-box tall"><canvas id="chartProjects" role="img" aria-label="@L["Chart.ProjectsByStatus"]"></canvas><div class="chart-empty" hidden>@L["Js.NoData"]</div></div>
+        <div class="table-scroll" hidden data-table></div>
+    </section>
+
+    @if (Model.CanSeeAllData)
+    {
+        <section class="glass-card span-12" data-chart-card="employees">
+            <div class="card-head">
+                <div>
+                    <h2 class="card-title">@L["Chart.EmployeePerformance"]</h2>
+                    <p class="card-hint">@L["Chart.EmployeePerformanceHint"]</p>
+                </div>
+                <button type="button" class="icon-btn" data-toggle-table title="@L["Js.ShowTable"]" aria-label="@L["Js.ShowTable"]"><i class="f7-icons sm">table</i></button>
+            </div>
+            <div class="chart-box"><canvas id="chartEmployees" role="img" aria-label="@L["Chart.EmployeePerformance"]"></canvas><div class="chart-empty" hidden>@L["Js.NoData"]</div></div>
+            <div class="table-scroll" hidden data-table></div>
+        </section>
+    }
+</div>
+
+<!-- ============ Open follow-ups (server-side grid) ============ -->
+<section class="glass-card page-section">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title">@L["Dashboard.OpenFollowUps"]</h2>
+            <p class="card-hint">@L["Dashboard.OpenFollowUpsHint"]</p>
+        </div>
+        <span class="small text-tertiary" id="updatedAt" aria-live="polite"></span>
+    </div>
+    <div id="followUpsGrid"></div>
+</section>
+
+@section Libraries {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+}
+@section Scripts {
+    <script>
+        window.DashboardConfig = {
+            canSeeAllData: @(Model.CanSeeAllData ? "true" : "false"),
+            todayLocal: "@Model.TodayLocal",
+            urls: {
+                data: "@Url.Action("Data", "Dashboard")",
+                clients: "@Url.Action("Clients", "Lookup")",
+                employees: "@Url.Action("Employees", "Lookup")"
+            }
+        };
+    </script>
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,107 @@
+@model FollowUpFormViewModel
+@using CrmSystem.Models.Enums
+@{
+    var isEdit = Model.FollowUpId.HasValue;
+    var arabic = AppCultures.IsArabic;
+}
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.FollowUpId" method="post" novalidate>
+    <div class="modal-header">
+        <h2 class="modal-title">@(isEdit ? L["FollowUps.Edit"] : L["FollowUps.New"])</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+        <input type="hidden" asp-for="RowVersion" />
+        <input type="hidden" asp-for="SourceActivityId" />
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="ClientId" class="form-label required"></label>
+                <select asp-for="ClientId" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Common.SearchCompany"]" required>
+                    @if (Model.ClientId.HasValue) { <option value="@Model.ClientId" selected>@Model.ClientName</option> }
+                </select>
+                <span asp-validation-for="ClientId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ContactId" class="form-label"></label>
+                <select asp-for="ContactId" data-remote="@Url.Action("Contacts", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Select"]">
+                    @if (Model.ContactId.HasValue) { <option value="@Model.ContactId" selected>@Model.ContactName</option> }
+                </select>
+                <span asp-validation-for="ContactId"></span>
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="DueDate" class="form-label required"></label>
+                <input asp-for="DueDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span asp-validation-for="DueDate"></span>
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="DueTime" class="form-label required"></label>
+                <input asp-for="DueTime" type="time" class="form-control" asp-format="{0:HH:mm}" />
+                <span asp-validation-for="DueTime"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Priority" class="form-label"></label>
+                <select asp-for="Priority" class="form-select" asp-items="@(UiHelpers.EnumOptions<FollowUpPriority>(L, "Priority", Model.Priority))"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="FollowUpTypeId" class="form-label required"></label>
+                <select asp-for="FollowUpTypeId" class="form-select">
+                    <option value="">@L["Common.Select"]</option>
+                    @foreach (var t in Model.Types) { <option value="@t.ActivityTypeId" selected="@(t.ActivityTypeId == Model.FollowUpTypeId)">@(arabic ? t.NameAr : t.NameEn)</option> }
+                </select>
+                <span asp-validation-for="FollowUpTypeId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ReminderMinutesBefore" class="form-label"></label>
+                <select asp-for="ReminderMinutesBefore" class="form-select">
+                    @foreach (var m in new[] { 0, 15, 30, 60, 120, 240, 720, 1440, 2880, 4320, 10080 }.Union(new[] { Model.ReminderMinutesBefore }).Distinct().OrderBy(x => x))
+                    {
+                        var label = m == 0 ? L["Reminder.AtTime"].Value : m < 60 ? L["Reminder.Minutes", m].Value : m % 1440 == 0 ? L["Reminder.Days", m / 1440].Value : L["Reminder.Hours", m / 60.0].Value;
+                        <option value="@m" selected="@(m == Model.ReminderMinutesBefore)">@label</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label required"></label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="@L["Activities.FollowUpDescriptionHint"]"></textarea>
+                <span asp-validation-for="Description"></span>
+            </div>
+            @if (Model.CanAssign)
+            {
+                <div class="col-md-6">
+                    <label asp-for="AssignedToId" class="form-label"></label>
+                    <select asp-for="AssignedToId" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Common.Select"]" data-no-clear>
+                        @if (!string.IsNullOrEmpty(Model.AssignedToId)) { <option value="@Model.AssignedToId" selected>@Model.AssignedToName</option> }
+                    </select>
+                </div>
+            }
+            <div class="col-md-6">
+                <label asp-for="ProjectId" class="form-label"></label>
+                <select asp-for="ProjectId" data-remote="@Url.Action("Projects", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.ProjectId.HasValue) { <option value="@Model.ProjectId" selected>@Model.ProjectName</option> }
+                </select>
+                <span asp-validation-for="ProjectId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="QuotationId" class="form-label"></label>
+                <select asp-for="QuotationId" data-remote="@Url.Action("Quotations", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.QuotationId.HasValue) { <option value="@Model.QuotationId" selected>@Model.QuotationName</option> }
+                </select>
+                <span asp-validation-for="QuotationId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="TenderId" class="form-label"></label>
+                <select asp-for="TenderId" data-remote="@Url.Action("Tenders", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.TenderId.HasValue) { <option value="@Model.TenderId" selected>@Model.TenderName</option> }
+                </select>
+                <span asp-validation-for="TenderId"></span>
+            </div>
+            <div class="col-12">
+                <div class="form-text"><i class="f7-icons sm" aria-hidden="true">bell</i> @L["Activities.ReminderHint"]</div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+        <button type="submit" class="btn btn-primary">@L["Common.Save"]</button>
+    </div>
+</form>

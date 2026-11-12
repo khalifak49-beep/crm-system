@@ -1,0 +1,112 @@
+@model FollowUpDetailsViewModel
+@using CrmSystem.Models.Enums
+@{
+    var f = Model.Item;
+    var arabic = AppCultures.IsArabic;
+    var company = arabic && !string.IsNullOrEmpty(f.CompanyNameAr) ? f.CompanyNameAr : f.CompanyName;
+    string StatusClass(FollowUpStatus s) => s switch { FollowUpStatus.Overdue => "red", FollowUpStatus.Completed => "green", FollowUpStatus.Cancelled => "gray", _ => "blue" };
+    string StatusIcon(FollowUpStatus s) => s switch { FollowUpStatus.Overdue => "exclamationmark_circle", FollowUpStatus.Completed => "checkmark_circle", FollowUpStatus.Cancelled => "slash_circle", _ => "clock" };
+}
+<div class="modal-header">
+    <h2 class="modal-title">@L["FollowUps.Details"]</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+</div>
+<div class="modal-body">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <span class="badge-soft @StatusClass(f.EffectiveStatus)"><i class="f7-icons" aria-hidden="true">@StatusIcon(f.EffectiveStatus)</i>@L["FollowUpStatus." + (int)f.EffectiveStatus]</span>
+        <span class="badge-soft gray"><i class="f7-icons" aria-hidden="true">flag</i>@L["Priority." + (int)f.Priority]</span>
+        <span class="badge-soft @(f.ReminderStatus == ReminderStatus.Failed ? "red" : "gray")"><i class="f7-icons" aria-hidden="true">bell</i>@L["ReminderStatus." + (int)f.ReminderStatus]</span>
+    </div>
+
+    <h3 class="h5 mb-1">@f.Description</h3>
+    <div class="text-secondary-2 mb-3">
+        <i class="f7-icons sm" aria-hidden="true">calendar</i> <span class="ltr">@f.DueDate.ToString("dd/MM/yyyy") @f.DueTime.ToString("hh:mm tt")</span>
+        · @(arabic ? f.FollowUpTypeNameAr : f.FollowUpTypeNameEn) · @f.AssignedToName
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="glass-card h-100" style="padding:1rem">
+                <div class="card-title mb-2"><i class="f7-icons sm" aria-hidden="true">building_2</i> @L["Field.Company"]</div>
+                <dl class="kv">
+                    <dt>@L["Field.CompanyName"]</dt><dd><a href="@Url.Action("Details", "Clients", new { id = f.ClientId })">@company</a></dd>
+                    <dt>@L["Field.Phone"]</dt><dd dir="ltr" class="text-start">@(Model.Client.Phone ?? "—")</dd>
+                    <dt>@L["Field.Email"]</dt><dd>@(Model.Client.Email ?? "—")</dd>
+                    <dt>@L["Field.City"]</dt><dd>@(Model.Client.City ?? "—")</dd>
+                    <dt>@L["Field.PrimaryContact"]</dt><dd>@(Model.PrimaryContact ?? "—")</dd>
+                </dl>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="glass-card h-100" style="padding:1rem">
+                <div class="card-title mb-2"><i class="f7-icons sm" aria-hidden="true">person</i> @L["Field.ContactPerson"]</div>
+                <dl class="kv">
+                    <dt>@L["Field.FullName"]</dt><dd>@(f.ContactName ?? "—")</dd>
+                    <dt>@L["Field.Phone"]</dt><dd dir="ltr" class="text-start">@if (!string.IsNullOrEmpty(f.ContactMobile ?? f.ContactPhone)) { <a href="tel:@(f.ContactMobile ?? f.ContactPhone)">@(f.ContactMobile ?? f.ContactPhone)</a> } else { <span>—</span> }</dd>
+                    <dt>@L["Field.Email"]</dt><dd>@if (!string.IsNullOrEmpty(f.ContactEmail)) { <a href="mailto:@f.ContactEmail">@f.ContactEmail</a> } else { <span>—</span> }</dd>
+                    @if (!string.IsNullOrEmpty(f.ProjectName)) { <dt>@L["Field.Project"]</dt><dd><a href="@Url.Action("Details", "Projects", new { id = f.ProjectId })">@f.ProjectName</a></dd> }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    @if (f.SourceActivityId.HasValue)
+    {
+        <div class="form-section">
+            <div class="form-section-title"><i class="f7-icons sm" aria-hidden="true">arrow_turn_down_right</i>@L["FollowUps.PreviousActivity"]</div>
+            <div class="timeline-text"><strong>@f.SourceActivityDate?.ToString("dd/MM/yyyy") · @(arabic ? f.SourceActivityTypeNameAr : f.SourceActivityTypeNameEn)</strong></div>
+            @if (!string.IsNullOrEmpty(f.SourceActivityNotes)) { <div class="timeline-text">@f.SourceActivityNotes</div> }
+            @if (!string.IsNullOrEmpty(f.SourceActivityOutcome)) { <div class="timeline-outcome"><i class="f7-icons sm" aria-hidden="true">checkmark</i>@f.SourceActivityOutcome</div> }
+        </div>
+    }
+
+    @if (f.Status == FollowUpStatus.Completed)
+    {
+        <div class="form-section">
+            <div class="form-section-title"><i class="f7-icons sm" aria-hidden="true">checkmark_circle</i>@L["FollowUps.CompletionInfo"]</div>
+            <div class="timeline-text">@f.CompletedAtUtc?.ToString("dd/MM/yyyy HH:mm") UTC</div>
+            @if (!string.IsNullOrEmpty(f.CompletionNotes)) { <div class="timeline-text">@f.CompletionNotes</div> }
+        </div>
+    }
+    @if (f.Status == FollowUpStatus.Cancelled)
+    {
+        <div class="form-section">
+            <div class="form-section-title"><i class="f7-icons sm" aria-hidden="true">slash_circle</i>@L["Field.CancelReason"]</div>
+            <div class="timeline-text">@f.CancelReason</div>
+        </div>
+    }
+
+    @if (Model.Chain.Count > 0)
+    {
+        <div class="form-section">
+            <div class="form-section-title"><i class="f7-icons sm" aria-hidden="true">link</i>@L["FollowUps.Chain"]</div>
+            @foreach (var c in Model.Chain)
+            {
+                <div class="small mb-1"><button type="button" class="btn-link-plain p-0" data-open-form="@Url.Action("Details", new { id = c.Id })">@c.Date.ToString("dd/MM/yyyy") — @c.Description</button> <span class="badge-soft @StatusClass(c.Status)">@L["FollowUpStatus." + (int)c.Status]</span></div>
+            }
+        </div>
+    }
+
+    <div class="form-section">
+        <div class="form-section-title"><i class="f7-icons sm" aria-hidden="true">clock</i>@L["FollowUps.RecentActivities"]</div>
+        @if (Model.RecentActivities.Count == 0) { <div class="small text-tertiary">@L["Grid.Empty"]</div> }
+        @foreach (var a in Model.RecentActivities)
+        {
+            <div class="small mb-2">
+                <strong>@a.ActivityDate.ToString("dd/MM/yyyy") · @(arabic ? a.ActivityTypeNameAr : a.ActivityTypeNameEn)</strong> — @a.PerformedByName
+                @if (!string.IsNullOrEmpty(a.Notes)) { <div class="timeline-text">@a.Notes</div> }
+                @if (!string.IsNullOrEmpty(a.Outcome)) { <div class="text-tertiary">→ @a.Outcome</div> }
+            </div>
+        }
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Close"]</button>
+    @if (Model.CanEdit && Model.IsOpen)
+    {
+        <button type="button" class="btn btn-light-fill" data-open-form="@Url.Action("Edit", new { id = f.FollowUpId })" data-reload-grid="followUpsGrid">@L["FollowUps.Reschedule"]</button>
+        <button type="button" class="btn btn-primary" data-open-form="@Url.Action("Complete", new { id = f.FollowUpId })" data-reload-grid="followUpsGrid">
+            <i class="f7-icons" aria-hidden="true">checkmark_circle</i>@L["FollowUps.MarkCompleted"]
+        </button>
+    }
+</div>

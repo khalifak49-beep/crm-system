@@ -1,0 +1,22 @@
+@model CancelFollowUpViewModel
+<form asp-action="Cancel" asp-route-id="@Model.FollowUpId" method="post" novalidate>
+    <div class="modal-header">
+        <h2 class="modal-title">@L["FollowUps.Cancel"]</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" asp-for="RowVersion" />
+        <div class="mb-3">
+            <div class="fw-semibold">@Model.ClientName</div>
+            <div class="text-secondary-2 small">@Model.Description</div>
+        </div>
+        <label asp-for="CancelReason" class="form-label required"></label>
+        <textarea asp-for="CancelReason" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="CancelReason"></span>
+        <div class="form-text mt-2">@L["FollowUps.CancelHint"]</div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Close"]</button>
+        <button type="submit" class="btn btn-danger">@L["FollowUps.Cancel"]</button>
+    </div>
+</form>

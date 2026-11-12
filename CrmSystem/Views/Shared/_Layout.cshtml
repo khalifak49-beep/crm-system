@@ -1,0 +1,223 @@
+@using CrmSystem.Infrastructure.Navigation
+@inject IAppSettings AppSettings
+@{
+    var settings = await AppSettings.GetAsync();
+    var arabic = AppCultures.IsArabic;
+    var companyName = settings.CompanyDisplayName(arabic);
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var mainRole = User.MainRole();
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var sections = new[] { "Main", "Sales", "Admin" };
+}
+<!DOCTYPE html>
+<html lang="@(arabic ? "ar" : "en")" dir="@(arabic ? "rtl" : "ltr")">
+<head>
+    <title>@ViewData["Title"] · @companyName</title>
+    <partial name="_Head" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div id="topProgress" class="top-progress" aria-hidden="true"></div>
+    <a class="visually-hidden-focusable position-absolute m-2 btn btn-primary" href="#main">Skip to content</a>
+
+    <div class="app-shell">
+        <!-- ============ Sidebar ============ -->
+        <aside class="sidebar" aria-label="@L["App.Title"]">
+            <div class="sidebar-brand">
+                <div class="brand-mark" aria-hidden="true">
+                    @if (!string.IsNullOrWhiteSpace(settings.LogoPath))
+                    {
+                        <img src="@Url.Content(settings.LogoPath)" alt="" />
+                    }
+                    else
+                    {
+                        <i class="f7-icons">person_2_square_stack_fill</i>
+                    }
+                </div>
+                <div class="min-w-0">
+                    <div class="brand-name text-truncate">@companyName</div>
+                    <div class="brand-sub">@L["App.Title"]</div>
+                </div>
+                <button type="button" class="icon-btn menu-toggle ms-auto" data-sidebar-toggle aria-label="@L["Top.CloseMenu"]">
+                    <i class="f7-icons">xmark</i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                @foreach (var section in sections)
+                {
+                    var items = MenuItems.All.Where(m => m.Section == section && m.Roles.Any(r => User.IsInRole(r))).ToList();
+                    if (items.Count == 0) { continue; }
+                    <div class="nav-section">@L["Menu.Section." + section]</div>
+                    foreach (var item in items)
+                    {
+                        var active = string.Equals(currentController, item.Controller, StringComparison.OrdinalIgnoreCase);
+                        if (item.IsAvailable)
+                        {
+                            <a class="nav-link-item @(active ? "active" : "")" asp-controller="@item.Controller" asp-action="@item.Action"
+                               aria-current="@(active ? "page" : null)">
+                                <i class="f7-icons" aria-hidden="true">@item.Icon</i>
+                                <span>@L["Menu." + item.Key]</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="nav-link-item disabled" aria-disabled="true">
+                                <i class="f7-icons" aria-hidden="true">@item.Icon</i>
+                                <span>@L["Menu." + item.Key]</span>
+                                <span class="soon-pill">@L["Common.Soon"]</span>
+                            </span>
+                        }
+                    }
+                }
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="avatar" aria-hidden="true">@User.Initials(arabic)</div>
+                <div class="min-w-0">
+                    <div class="name text-truncate">@User.DisplayName(arabic)</div>
+                    <div class="role">@(mainRole == null ? "" : L["Role." + mainRole])</div>
+                </div>
+            </div>
+        </aside>
+        <div class="sidebar-scrim" aria-hidden="true"></div>
+
+        <!-- ============ Main ============ -->
+        <div class="main">
+            <header class="topbar">
+                <button type="button" class="icon-btn menu-toggle" data-sidebar-toggle aria-label="@L["Top.OpenMenu"]">
+                    <i class="f7-icons">sidebar_left</i>
+                </button>
+                <div class="topbar-title">
+                    <h1>@ViewData["Title"]</h1>
+                    @if (ViewData["Subtitle"] is string subtitle)
+                    {
+                        <p>@subtitle</p>
+                    }
+                </div>
+
+                <div class="topbar-actions">
+                    <!-- Language -->
+                    <form asp-controller="Language" asp-action="Set" method="post" class="m-0">
+                        <input type="hidden" name="lang" value="@(arabic ? "en" : "ar")" />
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <button type="submit" class="pill-btn" title="@L["Top.SwitchLanguageLabel"]" aria-label="@L["Top.SwitchLanguageLabel"]"
+                                lang="@(arabic ? "en" : "ar")">
+                            <i class="f7-icons sm" aria-hidden="true">globe</i>
+                            <span class="lang-label">@L["Top.SwitchLanguage"]</span>
+                        </button>
+                    </form>
+
+                    <!-- Theme -->
+                    <div class="popover-anchor">
+                        <button type="button" class="icon-btn" data-popover-target="#themePopover" aria-label="@L["Top.Theme"]" title="@L["Top.Theme"]">
+                            <i class="f7-icons">circle_lefthalf_fill</i>
+                        </button>
+                        <div id="themePopover" class="glass-popover narrow" role="menu">
+                            <div class="p-1">
+                                <button type="button" class="menu-item" role="menuitemradio" data-theme-option="light">
+                                    <i class="f7-icons sm" aria-hidden="true">sun_max</i> @L["Theme.Light"] <i class="f7-icons sm check" aria-hidden="true">checkmark</i>
+                                </button>
+                                <button type="button" class="menu-item" role="menuitemradio" data-theme-option="dark">
+                                    <i class="f7-icons sm" aria-hidden="true">moon</i> @L["Theme.Dark"] <i class="f7-icons sm check" aria-hidden="true">checkmark</i>
+                                </button>
+                                <button type="button" class="menu-item" role="menuitemradio" data-theme-option="auto">
+                                    <i class="f7-icons sm" aria-hidden="true">circle_lefthalf_fill</i> @L["Theme.Auto"] <i class="f7-icons sm check" aria-hidden="true">checkmark</i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notifications bell -->
+                    @if (settings.InAppEnabled)
+                    {
+                        <div class="popover-anchor">
+                            <button type="button" id="bellButton" class="icon-btn" data-popover-target="#bellPopover" aria-label="@L["Top.Notifications"]" title="@L["Top.Notifications"]">
+                                <i class="f7-icons">bell</i>
+                                <span id="bellBadge" class="badge-dot" hidden>0</span>
+                            </button>
+                            <div id="bellPopover" class="glass-popover" role="dialog" aria-label="@L["Top.Notifications"]">
+                                <div class="popover-head">
+                                    <h2>@L["Top.Notifications"]</h2>
+                                    <button type="button" id="markAllRead" class="btn-link-plain">@L["Top.MarkAllRead"]</button>
+                                </div>
+                                <div id="bellList" class="popover-body" aria-live="polite">
+                                    <div class="popover-empty"><div class="spinner mx-auto"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Account -->
+                    <div class="popover-anchor">
+                        <button type="button" class="icon-btn" data-popover-target="#accountPopover" aria-label="@L["Top.Account"]" title="@L["Top.Account"]">
+                            <span class="avatar" style="width:30px;height:30px;font-size:.75rem">@User.Initials(arabic)</span>
+                        </button>
+                        <div id="accountPopover" class="glass-popover narrow" role="menu">
+                            <div class="px-3 pt-3 pb-2">
+                                <div class="fw-semibold text-truncate">@User.DisplayName(arabic)</div>
+                                <div class="small text-tertiary text-truncate">@User.Identity?.Name</div>
+                            </div>
+                            <div class="menu-sep"></div>
+                            <div class="p-1">
+                                <button type="button" class="menu-item" role="menuitem" data-open-form="@Url.Action("ChangePassword", "Account")" data-size="modal-md">
+                                    <i class="f7-icons sm" aria-hidden="true">lock</i> @L["Account.ChangePassword"]
+                                </button>
+                            </div>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="p-1 m-0">
+                                <button type="submit" class="menu-item" role="menuitem">
+                                    <i class="f7-icons sm flip-rtl" aria-hidden="true">square_arrow_right</i> @L["Top.Logout"]
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main id="main" tabindex="-1">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- Confirmation dialog (used by App.confirm and data-confirm forms) -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:340px">
+            <div class="modal-content glass-modal">
+                <div class="confirm-body">
+                    <div class="confirm-icon" data-confirm-icon><i class="f7-icons" aria-hidden="true">trash</i></div>
+                    <h2 data-confirm-title>@L["Js.Confirm.Title"]</h2>
+                    <p data-confirm-message></p>
+                </div>
+                <div class="confirm-actions">
+                    <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Js.Confirm.Cancel"]</button>
+                    <button type="button" class="btn btn-danger" data-confirm-ok>@L["Js.Confirm.Yes"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup forms (Create / Edit) are loaded into this modal by App.openForm -->
+    <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content glass-modal"></div>
+        </div>
+    </div>
+
+    <partial name="_AppConfig" />
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/lib/tom-select/tom-select.complete.min.js"></script>
+    @await RenderSectionAsync("Libraries", required: false)
+    <script src="~/js/app.js" asp-append-version="true"></script>
+    <script src="~/js/grid.js" asp-append-version="true"></script>
+    <script src="~/js/ui.js" asp-append-version="true"></script>
+    <script src="~/js/columns.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

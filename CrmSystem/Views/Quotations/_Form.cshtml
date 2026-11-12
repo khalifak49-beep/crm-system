@@ -1,0 +1,94 @@
+@model QuotationFormViewModel
+@using CrmSystem.Models.Enums
+@{
+    var isEdit = Model.QuotationId.HasValue;
+}
+<form asp-controller="Quotations" asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.QuotationId" method="post" novalidate>
+    <div class="modal-header">
+        <h2 class="modal-title">@(isEdit ? L["Quotations.Edit"] : L["Quotations.New"])</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
+    </div>
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert-glass mb-3" role="alert"></div>
+        <input type="hidden" asp-for="RowVersion" />
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label asp-for="QuotationNumber" class="form-label required"></label>
+                <input asp-for="QuotationNumber" class="form-control" dir="ltr" />
+                <span asp-validation-for="QuotationNumber"></span>
+            </div>
+            <div class="col-md-8">
+                <label asp-for="ClientId" class="form-label required"></label>
+                <select asp-for="ClientId" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Common.SearchCompany"]" required>
+                    @if (Model.ClientId.HasValue) { <option value="@Model.ClientId" selected>@Model.ClientName</option> }
+                </select>
+                <span asp-validation-for="ClientId"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="SubmissionDate" class="form-label"></label>
+                <input asp-for="SubmissionDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+            </div>
+            <div class="col-6 col-md-4">
+                <label asp-for="ValidUntil" class="form-label"></label>
+                <input asp-for="ValidUntil" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span asp-validation-for="ValidUntil"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Status" class="form-label"></label>
+                <select asp-for="Status" class="form-select" asp-items="@(UiHelpers.EnumOptions<QuotationStatus>(L, "QuotationStatus", Model.Status))"></select>
+            </div>
+            <div class="col-8 col-md-4">
+                <label asp-for="QuotationValue" class="form-label"></label>
+                <input asp-for="QuotationValue" class="form-control" type="number" step="0.001" min="0" dir="ltr" />
+                <span asp-validation-for="QuotationValue"></span>
+            </div>
+            <div class="col-4 col-md-2">
+                <label asp-for="Currency" class="form-label"></label>
+                <input asp-for="Currency" class="form-control" maxlength="3" dir="ltr" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ContactId" class="form-label"></label>
+                <select asp-for="ContactId" data-remote="@Url.Action("Contacts", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.ContactId.HasValue) { <option value="@Model.ContactId" selected>@Model.ContactName</option> }
+                </select>
+                <span asp-validation-for="ContactId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ProjectId" class="form-label"></label>
+                <select asp-for="ProjectId" data-remote="@Url.Action("Projects", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.ProjectId.HasValue) { <option value="@Model.ProjectId" selected>@Model.ProjectName</option> }
+                </select>
+                <span asp-validation-for="ProjectId"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="TenderId" class="form-label"></label>
+                <select asp-for="TenderId" data-remote="@Url.Action("Tenders", "Lookup")" data-depends-on="ClientId" data-depends-param="clientId" data-placeholder="@L["Common.Optional"]">
+                    @if (Model.TenderId.HasValue) { <option value="@Model.TenderId" selected>@Model.TenderName</option> }
+                </select>
+                <span asp-validation-for="TenderId"></span>
+            </div>
+            @if (Model.CanAssign)
+            {
+                <div class="col-md-6">
+                    <label asp-for="AssignedToId" class="form-label"></label>
+                    <select asp-for="AssignedToId" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Common.Select"]">
+                        @if (!string.IsNullOrEmpty(Model.AssignedToId)) { <option value="@Model.AssignedToId" selected>@Model.AssignedToName</option> }
+                    </select>
+                </div>
+            }
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label"></label>
+                <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="col-12"><div class="form-text"><i class="f7-icons sm" aria-hidden="true">bell</i> @L["Quotations.ReminderHint"]</div></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-light-fill" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+        <button type="submit" class="btn btn-primary">@L["Common.Save"]</button>
+    </div>
+</form>

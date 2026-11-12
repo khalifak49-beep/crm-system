@@ -1,0 +1,158 @@
+@using CrmSystem.Models.Enums
+@using CrmSystem.Services
+@{
+    ViewData["Title"] = L["Menu.Reports"];
+    ViewData["Subtitle"] = L["Reports.Subtitle"];
+    var types = (List<CrmSystem.Models.Entities.ActivityType>)ViewBag.Types;
+    var canSeeAll = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SalesManager);
+    var arabic = AppCultures.IsArabic;
+    var icons = new Dictionary<string, string>
+    {
+        ["activities"] = "list_bullet", ["calls"] = "phone", ["emails"] = "envelope", ["visits"] = "car_fill",
+        ["followups"] = "calendar", ["overdue"] = "exclamationmark_circle", ["clients"] = "building_2",
+        ["projects"] = "briefcase", ["employees"] = "person_3"
+    };
+}
+
+<div class="tabs" role="tablist" id="reportTypes">
+    @foreach (var t in ReportService.Types)
+    {
+        <button type="button" class="tab-btn" role="tab" data-type="@t" aria-selected="@(t == "activities" ? "true" : "false")">
+            <i class="f7-icons sm" aria-hidden="true">@icons[t]</i>@L["Reports.Type." + t]
+        </button>
+    }
+</div>
+
+<section class="glass-card page-section">
+    <div class="filters">
+        <div class="filter-field"><label for="rFrom">@L["Filter.From"]</label><input type="date" id="rFrom" class="form-control" /></div>
+        <div class="filter-field"><label for="rTo">@L["Filter.To"]</label><input type="date" id="rTo" class="form-control" /></div>
+        <div class="filter-field grow">
+            <label for="rClient">@L["Field.Company"]</label>
+            <select id="rClient" data-remote="@Url.Action("Clients", "Lookup")" data-placeholder="@L["Filter.AllClients"]"></select>
+        </div>
+        @if (canSeeAll)
+        {
+            <div class="filter-field grow">
+                <label for="rUser">@L["Reports.Employee"]</label>
+                <select id="rUser" data-remote="@Url.Action("Employees", "Lookup")" data-placeholder="@L["Filter.AllEmployees"]"></select>
+            </div>
+        }
+        <div class="filter-field" data-for="activities">
+            <label for="rType">@L["Field.ActivityType"]</label>
+            <select id="rType" class="form-select">
+                <option value="">@L["Common.All"]</option>
+                @foreach (var t in types) { <option value="@t.ActivityTypeId">@(arabic ? t.NameAr : t.NameEn)</option> }
+            </select>
+        </div>
+        <div class="filter-field" data-for="followups">
+            <label for="rFuStatus">@L["Field.Status"]</label>
+            <select id="rFuStatus" class="form-select">
+                <option value="">@L["Common.All"]</option>
+                @foreach (var o in UiHelpers.EnumOptions<FollowUpStatus>(L, "FollowUpStatus")) { <option value="@o.Value">@o.Text</option> }
+            </select>
+        </div>
+        <div class="filter-field" data-for="projects">
+            <label for="rProjStatus">@L["Field.Status"]</label>
+            <select id="rProjStatus" class="form-select">
+                <option value="">@L["Common.All"]</option>
+                @foreach (var o in UiHelpers.EnumOptions<ProjectStatus>(L, "ProjectStatus")) { <option value="@o.Value">@o.Text</option> }
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="glass-card">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title" id="reportTitle">@L["Reports.Type.activities"]</h2>
+            <p class="card-hint" id="reportHint"></p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-light-fill" id="btnExcel"><i class="f7-icons" aria-hidden="true">table</i>@L["Reports.Excel"]</button>
+            <button type="button" class="btn btn-light-fill" id="btnPdf"><i class="f7-icons" aria-hidden="true">doc_richtext</i>@L["Reports.Pdf"]</button>
+            <button type="button" class="btn btn-light-fill" id="btnPrint"><i class="f7-icons" aria-hidden="true">printer</i>@L["Reports.Print"]</button>
+        </div>
+    </div>
+    <div id="reportGridHost"><div id="reportGrid"></div></div>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const t = App.t, esc = App.escapeHtml;
+            const v = (id) => document.getElementById(id)?.value || "";
+            const query = new URLSearchParams(location.search);
+            let type = query.get("type") || "activities";
+            let grid = null;
+
+            // default period: this month
+            const today = App.config.todayLocal;
+            document.getElementById("rFrom").value = query.get("from") || today.substring(0, 8) + "01";
+            document.getElementById("rTo").value = query.get("to") || today;
+
+            const filterParams = () => ({
+                type,
+                from: v("rFrom"), to: v("rTo"), clientId: v("rClient"), userId: v("rUser"),
+                activityTypeId: type === "activities" ? v("rType") : "",
+                followUpStatus: type === "followups" ? v("rFuStatus") : "",
+                projectStatus: type === "projects" ? v("rProjStatus") : ""
+            });
+
+            const render = (kind, value, row) => {
+                if (value === null || value === undefined || value === "") return Ui.dash();
+                if (kind === "date") return Ui.date(value);
+                if (kind === "time") return `<span class="tabular">${App.formatTime(value)}</span>`;
+                if (kind === "number") return `<span class="tabular">${App.formatNumber(value)}</span>`;
+                if (kind === "money") return Ui.money(value, row.currency);
+                if (kind === "percent") return `<span class="tabular">${value}%</span>`;
+                if (kind === "longtext") return Ui.clip(value);
+                if (kind.startsWith("status:")) return Ui.status(kind.substring(7), value);
+                return esc(value);
+            };
+
+            async function build() {
+                document.querySelectorAll("[data-for]").forEach((el) => el.hidden = el.dataset.for !== type);
+                document.getElementById("reportTitle").textContent = t("Reports.Type." + type);
+                document.getElementById("reportHint").textContent = t("Reports.Hint." + type);
+                history.replaceState(null, "", location.pathname + "?type=" + type);
+
+                // fetch the column definitions for this report, then create the grid
+                const first = await App.get("@Url.Action("Data")", Object.assign(filterParams(), { page: 1, pageSize: 5 }));
+                document.getElementById("reportGridHost").innerHTML = `<div id="reportGrid"></div>`;
+                grid = new CrmGrid("#reportGrid", {
+                    url: "@Url.Action("Data")",
+                    pageSize: 25,
+                    pageSizes: [25, 50, 100, 200],
+                    searchable: type !== "employees",
+                    params: filterParams,
+                    columns: first.columns.map((c) => ({
+                        key: c.key, title: c.title, sortable: type !== "employees", align: ["number", "money", "percent"].includes(c.kind) ? "end" : undefined,
+                        render: (row) => render(c.kind, row[c.key], row)
+                    }))
+                });
+            }
+
+            const exportUrl = (action, extra) => {
+                const p = new URLSearchParams(Object.entries(Object.assign(filterParams(), extra || {})).filter(([, x]) => x !== "" && x !== null && x !== undefined));
+                if (grid && grid.state.sort) { p.set("sort", grid.state.sort); p.set("dir", grid.state.dir); }
+                if (grid && grid.state.search) p.set("search", grid.state.search);
+                return App.url("Reports/" + action) + "?" + p.toString();
+            };
+            document.getElementById("btnExcel").addEventListener("click", () => { location.href = exportUrl("Export"); App.toast(t("Reports.Downloading"), "info"); });
+            document.getElementById("btnPrint").addEventListener("click", () => window.open(exportUrl("Print"), "_blank", "noopener"));
+            document.getElementById("btnPdf").addEventListener("click", () => window.open(exportUrl("Print", { pdf: true }), "_blank", "noopener"));
+
+            document.querySelectorAll("#reportTypes .tab-btn").forEach((b) => b.addEventListener("click", () => {
+                document.querySelectorAll("#reportTypes .tab-btn").forEach((x) => x.setAttribute("aria-selected", x === b ? "true" : "false"));
+                type = b.dataset.type;
+                build();
+            }));
+            ["rFrom", "rTo", "rClient", "rUser", "rType", "rFuStatus", "rProjStatus"].forEach((id) =>
+                document.getElementById(id)?.addEventListener("change", () => grid && grid.reload(true)));
+
+            document.querySelectorAll("#reportTypes .tab-btn").forEach((x) => x.setAttribute("aria-selected", x.dataset.type === type ? "true" : "false"));
+            build();
+        })();
+    </script>
+}
